@@ -1,0 +1,42 @@
+{
+  "list_groups": "List all groups for the tenant. Returns group objects with pagination (page_size, skip, filter, order_by). Groups are logical collections of users used for access control and organizational purposes.",
+  "create_group": "Create a new group. Requires display_name. Optionally include a description. Returns the new group with an auto-generated id. The group starts empty — use add_group_users to add members.",
+  "get_groups": "Retrieve a specific group by group_id. Returns the group object including display_name, description, and timestamps. Use list_groups to discover group_ids.",
+  "update_group": "Update attributes of a group (display_name, description). Uses PATCH semantics — omitted fields unchanged. Returns the updated group object.",
+  "delete_group": "Permanently delete a group. The group must have NO members or the request fails with 409. Remove all members with delete_group_users first. This cannot be undone.",
+  "list_group_users": "List all users that are members of a group. Returns full user objects with pagination. Requires group_id — use list_groups to discover groups.",
+  "add_group_users": "Add 1–1000 users to a group. Provide an array of user IDs. Requires the group to exist (use list_groups or create_group first). All-or-nothing: if any user ID is invalid, the entire operation fails.",
+  "delete_group_users": "Remove 1–1000 users from a group. Provide an array of user IDs. All-or-nothing: if any user ID is invalid, the entire operation fails.",
+
+  "list_users": "List all users for the tenant. Returns user objects with pagination (page_size, skip, filter, order_by). Supports filtering by email, username, and other attributes.",
+  "create_user": "Create a new user. Requires email, user_name, and display_name. Both email and username must be unique within the tenant (409 if duplicate). Returns the new user with an auto-generated id.",
+  "get_user": "Retrieve a specific user by user_id. Returns the full user object including email, username, display_name, status, and timestamps. Use list_users to discover user_ids.",
+  "update_user": "Update attributes of a user. Uses PATCH semantics — omitted fields unchanged. Returns 409 if updated email or username conflicts with an existing user.",
+  "delete_user": "Permanently delete a user. Removes the user from all group memberships. This cannot be undone.",
+  "list_user_groups": "List all groups a user belongs to. Returns full group objects with pagination. Requires user_id — use list_users to find users.",
+
+  "create_binding_job": "Create a credential binding job to provision a new passkey for a user. Specify the user_id and delivery method. The binding link is sent to the user or returned directly depending on the delivery method. Use list_users to find the user_id first.",
+  "get_binding_job": "Retrieve the status of a credential binding job by binding_job_id. Shows the current state of the passkey provisioning process (e.g. link sent, completed, expired, failed).",
+
+  "list_passkeys": "List all passkeys across the tenant. Returns passkey objects with state, type, and associated user info. Supports pagination and filtering. Passkeys are the cryptographic credentials users use to authenticate.",
+  "delete_passkey": "Permanently delete a passkey by passkey_id. The user will no longer be able to authenticate with this passkey. This cannot be undone. Use list_passkeys to find passkey_ids.",
+  "list_passkey_tags": "List all tags associated with a passkey. Tags are key-value metadata attached to passkeys for organizational purposes. Requires passkey_id — use list_passkeys to discover passkeys.",
+  "set_passkey_tags": "Set tags on a passkey, replacing all existing tags. Tags are key-value metadata. Uses PUT semantics — provide the complete set of desired tags; any existing tags not included will be removed.",
+
+  "scim_list_users": "List users via the SCIM v2.0 protocol. Supports SCIM filtering syntax and pagination (startIndex, count). Max 1000 results per page. Returns SCIM User resources with standard and extension attributes.",
+  "scim_create_user": "Create a user via SCIM. Requires externalId, userName, displayName, active, name (givenName, familyName), and emails (at least one primary). On conflict (duplicate externalId/userName), the existing user is reactivated instead of failing.",
+  "scim_get_user": "Retrieve a specific SCIM user by user_id. Returns the full SCIM User resource with all attributes.",
+  "scim_replace_user": "Replace a SCIM user entirely (PUT semantics). All required fields must be provided — this is not a partial update. Uses ETag-based optimistic locking to prevent concurrent update conflicts.",
+  "scim_update_user": "Partially update a SCIM user via PATCH operations (add, remove, replace). Operations are executed in order. Supports optimistic locking via version headers.",
+  "scim_delete_user": "Delete a SCIM user. Removes the user from all groups. May be soft or hard delete depending on configuration.",
+  "scim_list_groups": "List groups via the SCIM v2.0 protocol. Returns Group resources with displayName, externalId, members array, and Beyond Identity extensions. Permission groups cannot be created or modified via SCIM.",
+  "scim_create_group": "Create a group via SCIM. Requires displayName. Cannot use reserved permission group names. Optionally include members and description. All member IDs must reference existing users.",
+  "scim_get_group": "Retrieve a specific SCIM group by group_id. Returns the full SCIM Group resource including members array.",
+  "scim_update_group": "Partially update a SCIM group via PATCH operations. Supports adding/removing members subject to a max batch size limit.",
+  "scim_delete_group": "Delete a SCIM group. Cannot delete reserved permission groups. Automatically removes the group from all member users.",
+  "list_resource_types": "List SCIM resource types supported by this server (User and Group). Returns metadata describing schemas, endpoints, and supported operations. This is a fixed server-capability endpoint.",
+  "list_schemas": "List all SCIM schemas supported by this server, including core schemas and Beyond Identity extensions. This is a fixed server-capability endpoint.",
+  "get_service_provider_config": "Get the SCIM service provider configuration describing server capabilities: authentication, filtering, patch support, and max results (1000). This is a fixed server-capability endpoint.",
+
+  "retire_tenant_issuer": "Retire the intermediate tenant certificate used for device credential signing. This is a sensitive operation — once retired, the old certificate can no longer issue new credentials. Existing credentials signed by the old certificate remain valid until they expire."
+}
