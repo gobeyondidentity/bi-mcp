@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { ToolMeta, Platform } from "./types.js";
+import type { ToolMeta } from "./types.js";
 
 const STOP_WORDS = new Set([
   "the", "a", "an", "to", "how", "do", "i", "can", "is", "it",
@@ -37,8 +37,8 @@ const SYNONYMS_COMMON: Record<string, string[]> = {
   user: ["identity", "user"],
   identity: ["identity", "user"],
   member: ["identity", "user", "member"],
-  app: ["application"],
-  application: ["application", "app"],
+  app: ["application", "app", "sso_config", "sso-config"],
+  application: ["application", "app", "sso_config", "sso-config"],
   idp: ["identity_provider", "identity-provider"],
   sso: ["sso_config", "sso-config"],
   permission: ["role", "scope"],
@@ -116,12 +116,7 @@ export function searchTools(
 ): Array<{ name: string; description: string; tags: string[] }> {
   const tokens = tokenize(query);
   if (tokens.length === 0) {
-    // Return all tools if no meaningful query
-    return registry.map(({ name, description, tags }) => ({
-      name,
-      description,
-      tags,
-    }));
+    return [];
   }
 
   const expanded = expandTokens(tokens);
@@ -163,9 +158,10 @@ export function registerSearchTool(
           content: [
             {
               type: "text" as const,
-              text: `No tools found matching "${query}". Try broader terms or different keywords.`,
+              text: `No tools found matching "${query}". Describe what you want to do (e.g. 'add user to group', 'list applications', 'manage SSO') so we can find the right tool.`,
             },
           ],
+          isError: true,
         };
       }
       return {

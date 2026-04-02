@@ -474,3 +474,40 @@ API_KEY="your-key" npm start
 
 - [Secure Access (v1) API Reference](https://developer.beyondidentity.com/api/v1)
 - [Secure Workforce (v0) API Reference](https://docs.beyondidentity.com/api/v0)
+
+## Local Development MCP Config
+
+To use a local clone of this repo instead of the published npm package, point your MCP client at the TypeScript source directly:
+
+```json
+{
+  "mcpServers": {
+    "beyondidentity": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["tsx", "/path/to/bi-mcp/src/index.ts"],
+      "env": {
+        "API_KEY": "your-jwt-api-key"
+      }
+    }
+  }
+}
+```
+
+This runs the server from source via `tsx` — no build step required. Changes to `src/` take effect immediately on the next MCP session. To point at a non-production environment, add `BASE_URL`:
+
+```json
+{
+  "mcpServers": {
+    "beyondidentity": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["tsx", "/path/to/bi-mcp/src/index.ts"],
+      "env": {
+        "API_KEY": "your-jwt-api-key",
+        "BASE_URL": "http://localhost:8021"
+      }
+    }
+  }
+}
+```

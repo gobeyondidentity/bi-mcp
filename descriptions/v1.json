@@ -9,9 +9,9 @@
   "delete_realm": "Permanently delete a realm. The realm must have NO child resources (identities, groups, roles) or the request fails with 409. Delete all children first. This cannot be undone.",
 
   "list_groups": "List all groups in a realm. Returns group objects with pagination (page_size max 200, default 20). Supports filter and order_by query parameters. Requires realm_id — use list_realms to discover available realms.",
-  "create_group": "Create a new group in a realm. Requires display_name. Optionally include a description. Returns the new group with an auto-generated id. The group starts with no members — use add_group_members to populate it. Returns 409 if the name already exists.",
+  "create_group": "Create a new group in a realm. Requires display_name and description (both required). Returns the new group with an auto-generated id. The group starts with no members — use add_group_members to populate it. Returns 409 if the name already exists.",
   "get_group": "Retrieve a specific group by group_id. Returns the group object including id, display_name, description, and timestamps. Use list_groups to discover group_ids.",
-  "update_group": "Update attributes of a group (display_name, description). Uses PATCH semantics — omitted fields unchanged. Returns the updated group object.",
+  "update_group": "Update attributes of a group (display_name, description — both are required fields on a group). Uses PATCH semantics — omitted fields unchanged. Returns the updated group object.",
   "delete_group": "Permanently delete a group. The group must have NO members or the request fails with 409. Remove all members with delete_group_members first. This cannot be undone.",
   "add_group_members": "Add 1–1000 identities to a group. Provide an array of identity_ids (use list_identities to find them). Requires the group to exist (use list_groups or create_group first). All-or-nothing: if any identity_id is invalid, the entire operation fails. Members inherit any roles assigned to the group.",
   "delete_group_members": "Remove 1–1000 identities from a group. Provide an array of identity_ids. All-or-nothing: if any identity_id is invalid, the entire operation fails. Returns the updated group object.",

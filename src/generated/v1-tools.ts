@@ -285,7 +285,7 @@ export function registerV1Tools(
   server.registerTool(
     "create_group",
     {
-      description: "Create a new group in a realm. Requires display_name. Optionally include a description. Returns the new group with an auto-generated id. The group starts with no members — use add_group_members to populate it. Returns 409 if the name already exists.",
+      description: "Create a new group in a realm. Requires display_name and description (both required). Returns the new group with an auto-generated id. The group starts with no members — use add_group_members to populate it. Returns 409 if the name already exists.",
       inputSchema: {
       "realm_id": z.string().describe("A unique identifier for a realm."),
       "group": z.object({
@@ -356,7 +356,7 @@ export function registerV1Tools(
   server.registerTool(
     "update_group",
     {
-      description: "Update attributes of a group (display_name, description). Uses PATCH semantics — omitted fields unchanged. Returns the updated group object.",
+      description: "Update attributes of a group (display_name, description — both are required fields on a group). Uses PATCH semantics — omitted fields unchanged. Returns the updated group object.",
       inputSchema: {
       "realm_id": z.string().describe("A unique identifier for a realm."),
       "group_id": z.string().describe("A unique identifier for a group."),
