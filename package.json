@@ -2,6 +2,23 @@
   "name": "@beyondidentity/mcp",
   "version": "0.1.0",
   "description": "MCP server for the Beyond Identity public APIs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gobeyondidentity/bi-mcp.git"
+  },
+  "keywords": [
+    "auth",
+    "sso",
+    "iam",
+    "beyond",
+    "identity"
+  ],
+  "author": "Sam Huckaby",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/gobeyondidentity/bi-mcp/issues"
+  },
+  "homepage": "https://github.com/gobeyondidentity/bi-mcp#readme",
   "type": "module",
   "bin": {
     "beyondidentity-mcp": "./dist/index.js"
