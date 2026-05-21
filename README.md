@@ -7,6 +7,11 @@ The server auto-detects which Beyond Identity platform you're using from your AP
 - **Secure Access** (v1): 104 tools for the modern platform
 - **Secure Workforce** (v0): 35 tools for the legacy platform
 
+Two deployment modes are supported:
+
+- **stdio** (default) — one MCP process per tenant on the user's machine. Configured via `npx` or a local clone. See [Quick Start](#quick-start).
+- **Hosted (HTTP)** — one MCP server hosted centrally; clients connect via streamable HTTP with a per-session API token. See [Hosted (HTTP) Mode](#hosted-http-mode).
+
 ## Quick Start
 
 Add the server to your MCP client configuration:
@@ -48,10 +53,140 @@ That's it. The server extracts your tenant ID from the JWT and determines the co
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `API_KEY` | Yes | — | Beyond Identity API key (JWT). Obtained from the admin console under Settings > API Access. |
-| `REGION` | No | `US` | `US` or `EU`. Determines the API base URL. |
+| Variable | Mode | Required | Default | Description |
+|----------|------|----------|---------|-------------|
+| `API_KEY` | stdio | Yes | — | Beyond Identity API key (JWT). Obtained from the admin console under Settings > API Access. Ignored in HTTP mode (each session brings its own token). |
+| `REGION` | both | No | `US` | `US` or `EU`. In stdio mode, sets the API base URL. In HTTP mode, sets the default region when a request doesn't supply `X-BI-Region`. |
+| `BASE_URL` | both | No | — | Override the API base URL (useful for staging / local dev). Applies to every session in HTTP mode. |
+| `MCP_TRANSPORT` | both | No | `stdio` | `stdio` or `http`. Selects which transport the entry point launches. |
+| `PORT` | http | No | `3000` | HTTP listen port. |
+| `HOST` | http | No | `0.0.0.0` | HTTP listen interface. |
+| `MCP_PATH` | http | No | `/mcp` | URL path the MCP endpoint is served at. |
+
+## Hosted (HTTP) Mode
+
+Instead of every customer running a local stdio process, the same server can be hosted centrally and reached over streamable HTTP. Each incoming session brings its own Beyond Identity API key in an `Authorization: Bearer` header; the server constructs a per-session `Config` from that token (no shared process-level credential).
+
+### Per-session auth flow
+
+1. Client makes a `POST /mcp` with `Authorization: Bearer <api-key>` and a JSON-RPC `initialize` body. No `Mcp-Session-Id` header on this first call.
+2. Server validates the JWT, builds a per-session `Config` (platform, tenant, region, base URL), registers the appropriate tool set, mints a new session ID, and returns it as the `Mcp-Session-Id` response header.
+3. Client includes `Mcp-Session-Id: <id>` on every subsequent request for the lifetime of the session.
+4. Client sends `DELETE /mcp` with the session ID to terminate, or the server cleans up on transport close.
+
+### Per-request headers
+
+| Header | When | Description |
+|--------|------|-------------|
+| `Authorization: Bearer <jwt>` | Initialize only | The API key. Required on the initialize POST; ignored on subsequent requests (the session is already bound). |
+| `Mcp-Session-Id: <id>` | All non-initialize requests | The session ID returned by the initialize response. Server returns 404 `unknown_session` for unknown IDs. |
+| `X-BI-Region: US\|EU` | Initialize only | Overrides the server's default region for this session. |
+| `Accept: application/json, text/event-stream` | All requests | Required by the MCP streamable HTTP spec — server picks the best response format. |
+
+### Running locally
+
+```sh
+npm install --ignore-scripts
+npm run build              # generate tool code + compile
+npm run dev:http           # MCP_TRANSPORT=http tsx src/index.ts
+
+# → [beyond-identity-mcp] HTTP transport listening on http://0.0.0.0:3000/mcp
+```
+
+Or with a different port / staging base URL:
+
+```sh
+MCP_TRANSPORT=http \
+PORT=8080 \
+BASE_URL=https://staging-api.example.com \
+  npx tsx src/index.ts
+```
+
+### Local curl walkthrough
+
+```sh
+# 0. Set your API key once for easy reuse
+TOKEN="eyJhbGc...your-api-key-jwt..."
+
+# 1. Initialize — note the response Mcp-Session-Id header
+curl -i -X POST http://localhost:3000/mcp \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "initialize",
+    "id": 1,
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "curl", "version": "1.0"}
+    }
+  }'
+# → 200 OK, Mcp-Session-Id: <uuid>
+
+# 2. Capture the session ID
+SESSION_ID="<paste from above>"
+
+# 3. Send the required initialized notification
+curl -s -X POST http://localhost:3000/mcp \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Mcp-Session-Id: $SESSION_ID" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+
+# 4. List the registered tools
+curl -s -X POST http://localhost:3000/mcp \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Mcp-Session-Id: $SESSION_ID" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":2}'
+
+# 5. Call a tool (e.g., search_tools to find what's available)
+curl -s -X POST http://localhost:3000/mcp \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Mcp-Session-Id: $SESSION_ID" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "id": 3,
+    "params": {"name": "search_tools", "arguments": {"query": "list users"}}
+  }'
+
+# 6. Terminate the session
+curl -s -X DELETE http://localhost:3000/mcp \
+  -H "Mcp-Session-Id: $SESSION_ID"
+```
+
+### Connecting Claude Code (HTTP)
+
+Point Claude Code at the local HTTP endpoint. The exact config field shape may vary by Claude Code version — verify against current docs.
+
+```json
+{
+  "mcpServers": {
+    "beyondidentity-http": {
+      "type": "http",
+      "url": "http://localhost:3000/mcp",
+      "headers": {
+        "Authorization": "Bearer eyJhbGc...your-api-key-jwt..."
+      }
+    }
+  }
+}
+```
+
+### Testing
+
+```sh
+npm test
+```
+
+Runs the Node test suite under `tests/`. Covers JWT parsing, region routing, validation, all HTTP error paths, and the streamable-HTTP initialize happy path for both v0 and v1 platforms — no real Beyond Identity tenant required (tests use synthetic JWTs).
 
 ## How It Works
 
@@ -463,11 +598,17 @@ npx tsc --noEmit
 # Full build (generate + compile)
 npm run build
 
-# Run in development mode
+# Run in development mode (stdio)
 API_KEY="your-key" npm run dev
+
+# Run in development mode (HTTP — no API_KEY env var needed; per-session)
+npm run dev:http
 
 # Run compiled build
 API_KEY="your-key" npm start
+
+# Run the test suite
+npm test
 ```
 
 ## API Documentation
