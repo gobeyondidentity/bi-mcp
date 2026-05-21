@@ -28,6 +28,8 @@
     "build": "npm run generate && tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
+    "dev:http": "MCP_TRANSPORT=http tsx src/index.ts",
+    "test": "tsx --test tests/*.test.ts",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

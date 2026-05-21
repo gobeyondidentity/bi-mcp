@@ -15,7 +15,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
   const parts = token.split(".");
   if (parts.length !== 3) {
     throw new Error(
-      "API_KEY does not look like a Beyond Identity API key (expected a JWT with 3 segments)",
+      "API token does not look like a Beyond Identity API key (expected a JWT with 3 segments)",
     );
   }
 
@@ -27,7 +27,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
     decoded = Buffer.from(padded, "base64").toString("utf-8");
   } catch {
     throw new Error(
-      "API_KEY contains an invalid JWT (payload is not valid base64)",
+      "API token contains an invalid JWT (payload is not valid base64)",
     );
   }
 
@@ -36,13 +36,13 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
     payload = JSON.parse(decoded);
   } catch {
     throw new Error(
-      "API_KEY contains an invalid JWT (payload is not valid JSON)",
+      "API token contains an invalid JWT (payload is not valid JSON)",
     );
   }
 
   if (typeof payload !== "object" || payload === null) {
     throw new Error(
-      "API_KEY contains an invalid JWT (payload is not a JSON object)",
+      "API token contains an invalid JWT (payload is not a JSON object)",
     );
   }
 
@@ -63,27 +63,53 @@ function detectPlatform(
   }
 
   throw new Error(
-    "API_KEY JWT is missing expected claims (need 'bi_t' or 'sub' for tenant identification)",
+    "API token JWT is missing expected claims (need 'bi_t' or 'sub' for tenant identification)",
   );
 }
 
+export interface BuildConfigInput {
+  apiToken: string;
+  region?: string;
+  baseUrl?: string;
+}
+
+/**
+ * Build a per-session Config from an API token plus optional region/baseUrl
+ * overrides. Used by both the stdio mode (via loadConfig) and the HTTP mode,
+ * which constructs a fresh Config per incoming session.
+ */
+export function buildConfig(input: BuildConfigInput): Config {
+  if (!input.apiToken) {
+    throw new Error("API token is required");
+  }
+
+  const regionRaw = input.region ?? "US";
+  const regionInput = regionRaw.toUpperCase();
+  if (regionInput !== "US" && regionInput !== "EU") {
+    throw new Error(`region must be "US" or "EU" (got "${regionRaw}")`);
+  }
+  const region: Region = regionInput as Region;
+
+  const claims = decodeJwtPayload(input.apiToken);
+  const { platform, tenantId } = detectPlatform(claims);
+  const baseUrl = input.baseUrl || BASE_URLS[platform][region];
+
+  return { apiToken: input.apiToken, tenantId, platform, region, baseUrl };
+}
+
+/**
+ * Read API_KEY / REGION / BASE_URL from the environment and build a Config.
+ * Used by stdio mode where the entire process is bound to a single tenant.
+ */
 export function loadConfig(): Config {
   const apiToken = process.env.API_KEY;
   if (!apiToken) {
     throw new Error("API_KEY environment variable is required");
   }
 
-  const regionInput = (process.env.REGION ?? "US").toUpperCase();
-  if (regionInput !== "US" && regionInput !== "EU") {
-    throw new Error(
-      `REGION must be "US" or "EU" (got "${process.env.REGION}")`,
-    );
-  }
-  const region: Region = regionInput as Region;
-
-  const claims = decodeJwtPayload(apiToken);
-  const { platform, tenantId } = detectPlatform(claims);
-  const baseUrl = process.env.BASE_URL || BASE_URLS[platform][region];
-
-  return { apiToken, tenantId, platform, region, baseUrl };
+  return buildConfig({
+    apiToken,
+    region: process.env.REGION,
+    baseUrl: process.env.BASE_URL,
+  });
 }
