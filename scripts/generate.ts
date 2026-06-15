@@ -91,12 +91,56 @@ function escapeString(s: string): string {
 
 // ── JSON Schema → Zod code string ───────────────────────────────────────────
 
+// Walks a schema we're about to drop (because of depth bail-out) just to add
+// any non-conforming property keys to the remap as a defensive last-ditch net.
+// No Zod output, no schema effect — only remap is mutated.
+function harvestNonConformingKeys(
+  schema: SchemaObject,
+  remap: Map<string, string>,
+  depth: number = 0,
+): void {
+  if (depth > 20 || !schema || typeof schema !== "object") return;
+  if (schema.properties) {
+    for (const [key, propSchema] of Object.entries(schema.properties)) {
+      const safe = sanitizeKey(key);
+      if (safe !== key) recordRemap(remap, safe, key);
+      harvestNonConformingKeys(propSchema, remap, depth + 1);
+    }
+  }
+  if (schema.items) harvestNonConformingKeys(schema.items, remap, depth + 1);
+  for (const variants of [schema.oneOf, schema.anyOf, schema.allOf]) {
+    if (variants) {
+      for (const v of variants) harvestNonConformingKeys(v, remap, depth + 1);
+    }
+  }
+}
+
+// Records safeKey → originalKey in the remap, throwing if a different original
+// is already mapped to the same safeKey (sanitization collision).
+function recordRemap(
+  remap: Map<string, string>,
+  safeKey: string,
+  originalKey: string,
+): void {
+  const existing = remap.get(safeKey);
+  if (existing !== undefined && existing !== originalKey) {
+    throw new Error(
+      `Sanitization collision: both "${existing}" and "${originalKey}" reduce to "${safeKey}". ` +
+        `Disambiguate one of them or extend the sanitizer.`,
+    );
+  }
+  remap.set(safeKey, originalKey);
+}
+
 function jsonSchemaToZod(
   schema: SchemaObject,
   remap: Map<string, string>,
   depth: number = 0,
 ): string {
-  if (depth > 5) return "z.any()";
+  if (depth > 10) {
+    harvestNonConformingKeys(schema, remap, depth);
+    return "z.any()";
+  }
 
   // Handle allOf by merging
   if (schema.allOf && schema.allOf.length > 0) {
@@ -171,7 +215,7 @@ function jsonSchemaToZod(
       for (const [key, propSchema] of Object.entries(schema.properties)) {
         if (propSchema.readOnly) continue;
         const safeKey = sanitizeKey(key);
-        if (safeKey !== key) remap.set(safeKey, key);
+        if (safeKey !== key) recordRemap(remap, safeKey, key);
         const fieldZod = jsonSchemaToZod(propSchema, remap, depth + 1);
         const isRequired = requiredSet.has(key);
         fields.push(
@@ -327,6 +371,7 @@ function generateToolsFile(
   ];
 
   for (const tool of tools) {
+    try {
     const inputFields: string[] = [];
     // Per-tool map of sanitized key → original key. Populated as we walk the
     // body schema. Anything in here is renamed back to the original at
@@ -362,7 +407,7 @@ function generateToolsFile(
         )) {
           if ((propSchema as SchemaObject).readOnly) continue;
           const safeKey = sanitizeKey(key);
-          if (safeKey !== key) remap.set(safeKey, key);
+          if (safeKey !== key) recordRemap(remap, safeKey, key);
           const zodType = jsonSchemaToZod(propSchema as SchemaObject, remap, 0);
           const opt = requiredSet.has(key) ? "" : ".optional()";
           inputFields.push(`      ${JSON.stringify(safeKey)}: ${zodType}${opt}`);
@@ -473,6 +518,11 @@ ${toolConfigParts.join(",\n")},
       }
     },
   );`);
+    } catch (err) {
+      throw new Error(
+        `While generating tool "${tool.name}" (${platform}): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   lines.push("}");

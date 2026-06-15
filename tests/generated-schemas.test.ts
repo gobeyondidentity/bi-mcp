@@ -33,12 +33,21 @@ function captureTools(
 const v1Tools = captureTools(registerV1Tools);
 const v0Tools = captureTools(registerV0Tools);
 
-test("v1 register-fn emits the expected number of tools", () => {
-  assert.equal(v1Tools.length, 104);
+// Lower bounds rather than equality so legitimate spec growth (a new tool
+// added upstream) doesn't fail the suite. A large drop is still surfaced.
+// Update these if a deliberate reduction lands.
+test("v1 register-fn emits at least 100 tools", () => {
+  assert.ok(
+    v1Tools.length >= 100,
+    `expected ≥100 v1 tools, got ${v1Tools.length}`,
+  );
 });
 
-test("v0 register-fn emits the expected number of tools", () => {
-  assert.equal(v0Tools.length, 35);
+test("v0 register-fn emits at least 30 tools", () => {
+  assert.ok(
+    v0Tools.length >= 30,
+    `expected ≥30 v0 tools, got ${v0Tools.length}`,
+  );
 });
 
 test("every v1 tool name passes KEY_PATTERN", () => {

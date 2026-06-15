@@ -70,15 +70,17 @@ test("v1 client injects tenant_id into the path", async () => {
   }
 });
 
-test("v0 client does NOT substitute {tenant_id}", async () => {
+test("v0 client leaves {tenant_id} placeholders untouched", async () => {
+  // v0 paths never use {tenant_id} in practice, but this asserts the
+  // platform branch in client.ts that skips tenant injection on v0. The literal
+  // `{` and `}` get URL-encoded by `new URL()` to `%7B`/`%7D`.
   const stub = installFetchStub(jsonResponse({}));
   try {
     const client = new ApiClient(V0_CONFIG);
-    // v0 paths never use {tenant_id} in practice, but guard the branch.
-    await client.request("GET", "/scim/v2/Users");
+    await client.request("GET", "/synthetic/{tenant_id}/things");
     assert.equal(
       stub.calls[0].url,
-      "https://api.byndid.example/scim/v2/Users",
+      "https://api.byndid.example/synthetic/%7Btenant_id%7D/things",
     );
   } finally {
     stub.restore();
@@ -245,6 +247,50 @@ test("5xx response throws ApiError with HTTP <status> fallback message", async (
         assert.ok(err instanceof ApiError);
         assert.equal(err.statusCode, 500);
         assert.equal(err.message, "internal");
+        return true;
+      },
+    );
+  } finally {
+    stub.restore();
+  }
+});
+
+test("network-level fetch failure propagates as-is (NOT wrapped in ApiError)", async () => {
+  // fetch can throw before any response arrives (DNS, refused connection, abort).
+  // The client doesn't catch these — they bubble up to the caller untouched.
+  const original = globalThis.fetch;
+  const networkErr = new TypeError("fetch failed: ECONNREFUSED");
+  globalThis.fetch = (async () => {
+    throw networkErr;
+  }) as typeof fetch;
+  try {
+    const client = new ApiClient(V1_CONFIG);
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+      (err: unknown) => {
+        assert.equal(err, networkErr);
+        assert.ok(!(err instanceof ApiError));
+        return true;
+      },
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("4xx with empty body falls back to 'HTTP <status>' message", async () => {
+  const stub = installFetchStub(
+    new Response("", { status: 404, headers: { "content-type": "text/plain" } }),
+  );
+  try {
+    const client = new ApiClient(V1_CONFIG);
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms/x"),
+      (err: unknown) => {
+        assert.ok(err instanceof ApiError);
+        assert.equal(err.statusCode, 404);
+        assert.equal(err.code, "UNKNOWN");
+        assert.equal(err.message, "HTTP 404");
         return true;
       },
     );

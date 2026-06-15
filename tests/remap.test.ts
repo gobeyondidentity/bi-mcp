@@ -2,10 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { applyRemap } from "../src/remap.js";
 
+// These safe-key forms must match what sanitizeKey actually produces.
+// sanitizeKey keeps `.` as allowed, so version segments stay as e.g. `2.0`.
 const SCIM_REMAP: Record<string, string> = {
-  urn_ietf_params_scim_schemas_extension_enterprise_2_0_User:
+  "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User":
     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-  urn_scim_schemas_extension_byndid_1_0_Group:
+  "urn_scim_schemas_extension_byndid_1.0_Group":
     "urn:scim:schemas:extension:byndid:1.0:Group",
   _ref: "$ref",
 };
@@ -27,6 +29,43 @@ test("renames a top-level sanitized key back to its original", () => {
   const input = { _ref: "https://example.com/u/1" };
   assert.deepEqual(applyRemap(input, SCIM_REMAP), {
     $ref: "https://example.com/u/1",
+  });
+});
+
+test("renames a top-level URN-style sanitized key back to its original", () => {
+  // The case the entire sanitize+remap pipeline exists for.
+  const input = {
+    "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": {
+      employeeNumber: "E42",
+    },
+  };
+  assert.deepEqual(applyRemap(input, SCIM_REMAP), {
+    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+      employeeNumber: "E42",
+    },
+  });
+});
+
+test("renames a URN-style sanitized key nested inside a wrapper object (v1 SCIM shape)", () => {
+  // Models v1's `user`-wrapped SCIM body shape, which is the actual structure
+  // the generated v1 SCIM handlers pass to applyRemap.
+  const input = {
+    user: {
+      schemas: ["urn:ietf:params:scim:schemas:core:2.0:User"],
+      userName: "alice",
+      "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": {
+        employeeNumber: "E42",
+      },
+    },
+  };
+  assert.deepEqual(applyRemap(input, SCIM_REMAP), {
+    user: {
+      schemas: ["urn:ietf:params:scim:schemas:core:2.0:User"],
+      userName: "alice",
+      "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+        employeeNumber: "E42",
+      },
+    },
   });
 });
 

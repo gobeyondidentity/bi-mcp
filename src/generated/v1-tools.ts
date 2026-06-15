@@ -1511,12 +1511,17 @@ export function registerV1Tools(
     "trusted_origins": z.array(z.string()).describe("Trusted origins are URLs that will be allowed to make requests from a browser to the Beyond Identity API. This is used with Cross-Origin Resource Sharing (CORS). These may be in the form of `<scheme> "),
     "type": z.enum(["embedded"]),
     "authentication_methods": z.array(z.object({
-    "type": z.any(),
+    "type": z.enum(["email_one_time_password", "software_passkey", "webauthn_passkey"]).describe("Within our hosted web product, an array of values determines the\nclient-side authentication workflows:\n\nThe value `webauthn_passkey` triggers a workflow that generates a hardware\nkey within your devic"),
   })).optional(),
   }).describe("Configuration options for the embedded SDK authenticator."), z.object({
     "type": z.enum(["console"]),
     "onboarding_configuration": z.object({
-    "verification_method": z.union([z.any(), z.any()]),
+    "verification_method": z.union([z.object({
+    "type": z.enum(["idp"]).describe("The type of verification method to be used for credential onboarding. Currently only `idp` or `none` are supported options.\nIf set to `none` there will be no verification step performed for the identi"),
+    "idp_id": z.string().describe("The id of the IDP to use to verify the identity during the onboarding process."),
+  }).describe("Configures IDP verification for identities onboarding."), z.object({
+    "type": z.enum(["none"]).describe("The type of verification method to be used for credential onboarding. Currently only `idp` or `none` are supported options.\nIf set to `none` there will be no verification step performed for the identi"),
+  }).describe("An onboarding configuration with no verification configured. Identities will not be verified during the onboarding operation.")]),
   }).describe("Configuration options for the console onboarding experience."),
   }).describe("Configuration options for credential enrollment, enabling an identity to access the Beyond Identity Console. These options support both IDP-authorized flows and non-verified enrollment pathways.\n")]).optional(),
   }).describe("Representation of an authenticator configuration. This prescribes how an identity may authenticate themselves with Beyond Identity.\n").optional(),
@@ -1636,13 +1641,20 @@ export function registerV1Tools(
     "config": z.union([z.object({
     "invocation_type": z.enum(["automatic", "manual"]).describe("The method used to invoke the `invoke_url` in the embedded authenticator\nconfig type. The two methods available are:\n\nThe value `automatic` indicates that this invocation type automatically\nredirects ").optional(),
     "invoke_url": z.string().describe("URL to invoke during the authentication flow."),
-    "trusted_origins": z.array(z.any()).describe("Trusted origins are URLs that will be allowed to make requests from a browser to the Beyond Identity API. This is used with Cross-Origin Resource Sharing (CORS). These may be in the form of `<scheme> "),
+    "trusted_origins": z.array(z.string()).describe("Trusted origins are URLs that will be allowed to make requests from a browser to the Beyond Identity API. This is used with Cross-Origin Resource Sharing (CORS). These may be in the form of `<scheme> "),
     "type": z.enum(["embedded"]),
-    "authentication_methods": z.array(z.any()).optional(),
+    "authentication_methods": z.array(z.object({
+    "type": z.enum(["email_one_time_password", "software_passkey", "webauthn_passkey"]).describe("Within our hosted web product, an array of values determines the\nclient-side authentication workflows:\n\nThe value `webauthn_passkey` triggers a workflow that generates a hardware\nkey within your devic"),
+  })).optional(),
   }).describe("Configuration options for the embedded SDK authenticator."), z.object({
     "type": z.enum(["console"]),
     "onboarding_configuration": z.object({
-    "verification_method": z.any(),
+    "verification_method": z.union([z.object({
+    "type": z.enum(["idp"]).describe("The type of verification method to be used for credential onboarding. Currently only `idp` or `none` are supported options.\nIf set to `none` there will be no verification step performed for the identi"),
+    "idp_id": z.string().describe("The id of the IDP to use to verify the identity during the onboarding process."),
+  }).describe("Configures IDP verification for identities onboarding."), z.object({
+    "type": z.enum(["none"]).describe("The type of verification method to be used for credential onboarding. Currently only `idp` or `none` are supported options.\nIf set to `none` there will be no verification step performed for the identi"),
+  }).describe("An onboarding configuration with no verification configured. Identities will not be verified during the onboarding operation.")]),
   }).describe("Configuration options for the console onboarding experience."),
   }).describe("Configuration options for credential enrollment, enabling an identity to access the Beyond Identity Console. These options support both IDP-authorized flows and non-verified enrollment pathways.\n")]).optional(),
   }).describe("Representation of an authenticator configuration. This prescribes how an identity may authenticate themselves with Beyond Identity.\n").optional(),
@@ -2276,10 +2288,10 @@ export function registerV1Tools(
     "type": z.enum(["console"]),
     "onboarding_configuration": z.object({
     "verification_method": z.union([z.object({
-    "type": z.any(),
-    "idp_id": z.any(),
+    "type": z.enum(["idp"]).describe("The type of verification method to be used for credential onboarding. Currently only `idp` or `none` are supported options.\nIf set to `none` there will be no verification step performed for the identi"),
+    "idp_id": z.string().describe("The id of the IDP to use to verify the identity during the onboarding process."),
   }).describe("Configures IDP verification for identities onboarding."), z.object({
-    "type": z.any(),
+    "type": z.enum(["none"]).describe("The type of verification method to be used for credential onboarding. Currently only `idp` or `none` are supported options.\nIf set to `none` there will be no verification step performed for the identi"),
   }).describe("An onboarding configuration with no verification configured. Identities will not be verified during the onboarding operation.")]),
   }).describe("Configuration options for the console onboarding experience."),
   }).describe("Configuration options for credential enrollment, enabling an identity to access the Beyond Identity Console. These options support both IDP-authorized flows and non-verified enrollment pathways.\n"), z.object({
@@ -2382,10 +2394,10 @@ export function registerV1Tools(
     "type": z.enum(["console"]),
     "onboarding_configuration": z.object({
     "verification_method": z.union([z.object({
-    "type": z.any(),
-    "idp_id": z.any(),
+    "type": z.enum(["idp"]).describe("The type of verification method to be used for credential onboarding. Currently only `idp` or `none` are supported options.\nIf set to `none` there will be no verification step performed for the identi"),
+    "idp_id": z.string().describe("The id of the IDP to use to verify the identity during the onboarding process."),
   }).describe("Configures IDP verification for identities onboarding."), z.object({
-    "type": z.any(),
+    "type": z.enum(["none"]).describe("The type of verification method to be used for credential onboarding. Currently only `idp` or `none` are supported options.\nIf set to `none` there will be no verification step performed for the identi"),
   }).describe("An onboarding configuration with no verification configured. Identities will not be verified during the onboarding operation.")]),
   }).describe("Configuration options for the console onboarding experience."),
   }).describe("Configuration options for credential enrollment, enabling an identity to access the Beyond Identity Console. These options support both IDP-authorized flows and non-verified enrollment pathways.\n"), z.object({
