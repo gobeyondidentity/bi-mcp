@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ApiClient } from "../client.js";
 import { ApiError } from "../types.js";
+import { applyRemap } from "../remap.js";
 
 export function registerV0Tools(
   server: McpServer,
@@ -766,7 +767,7 @@ export function registerV0Tools(
     "value": z.string().describe("The email address. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email addresses are provided").optional(),
     "type": z.enum(["work", "home", "other"]).describe("The type of email address. Valid values are \"work\", \"home\", and \"other\" as defined in [RFC 7643](https://www.rfc-editor.org/rfc/rfc7643).\nImportant notes about email handling: - Only one email address").optional(),
   }).describe("Email addresses for the user. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email addresses a")).describe("The list containing the user's emails. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email ad"),
-      "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": z.object({
+      "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": z.object({
     "employeeNumber": z.string().describe("The identifier assigned to a user within the enterprise, often a numerical or alphanumeric code.\n").optional(),
   }).describe("A string identifier, typically numeric or alphanumeric, assigned to a person, typically based on order of hire or association as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#sec").optional(),
       "name": z.object({
@@ -780,7 +781,7 @@ export function registerV0Tools(
         const result = await apiClient.request(
           "POST",
           "/scim/v2/Users", {
-        body: { "schemas": params["schemas"], "externalId": params["externalId"], "userName": params["userName"], "displayName": params["displayName"], "active": params["active"], "emails": params["emails"], "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": params["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"], "name": params["name"] },
+        body: applyRemap({ "schemas": params["schemas"], "externalId": params["externalId"], "userName": params["userName"], "displayName": params["displayName"], "active": params["active"], "emails": params["emails"], "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": params["urn_ietf_params_scim_schemas_extension_enterprise_2.0_User"], "name": params["name"] }, {"urn_ietf_params_scim_schemas_extension_enterprise_2.0_User":"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"}),
       },
         );
         return {
@@ -853,7 +854,7 @@ export function registerV0Tools(
     "givenName": z.string().describe("The given name of the user, or first name in most Western languages.\n").optional(),
     "familyName": z.string().describe("The family name of the user, or last name in most Western languages.\n").optional(),
   }).describe("Definition of the user's name.").optional(),
-    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": z.object({
+    "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": z.object({
     "employeeNumber": z.string().describe("A string identifier, typically numeric or alphanumeric, assigned to a person, typically based on order of hire or association with an organization as defined in [RFC 7643](https://datatracker.ietf.org").optional(),
   }).describe("The Employee Number as defined in the enterprise SCIM extension").optional(),
     "meta": z.object({
@@ -868,7 +869,7 @@ export function registerV0Tools(
           "PUT",
           "/scim/v2/Users/{user_id}", {
         pathParams: { user_id: params["user_id"] as string },
-        body: { "user": params["user"] },
+        body: applyRemap({ "user": params["user"] }, {"urn_ietf_params_scim_schemas_extension_enterprise_2.0_User":"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"}),
       },
         );
         return {
@@ -1004,10 +1005,10 @@ export function registerV0Tools(
       "members": z.array(z.object({
     "display": z.string().describe("The display name of the group member, primarily used for display purposes.\n").optional(),
     "value": z.string().describe("ID of the user resource corresponding to the group member. This field is immutable.\n").optional(),
-    "$ref": z.string().describe("The URI to another user resource that is a member of the group. This is field is only used for requests and is not returned on the response.\n").optional(),
+    "_ref": z.string().describe("The URI to another user resource that is a member of the group. This is field is only used for requests and is not returned on the response.\n").optional(),
     "type": z.string().describe("The resource type of the group member. Currently, only users are\nsupported as group members. This field is only used for requests\nand is not returned on the response.\n\nSpecifying a group as a group me").optional(),
   }).describe("Definition of a group member.\n\nThe Beyond Identity SCIM server only supports users as group members.\n")).describe("The list of the group's members. Please note that only users can be added as members. If a non-existing user is specified, the endpoint will return a 404 error.").optional(),
-      "urn:scim:schemas:extension:byndid:1.0:Group": z.object({
+      "urn_scim_schemas_extension_byndid_1.0_Group": z.object({
     "description": z.string().describe("Description of the group.").optional(),
   }).describe("The Beyond Identity Group schema extension.").optional(),
       },
@@ -1017,7 +1018,7 @@ export function registerV0Tools(
         const result = await apiClient.request(
           "POST",
           "/scim/v2/Groups", {
-        body: { "schemas": params["schemas"], "displayName": params["displayName"], "members": params["members"], "urn:scim:schemas:extension:byndid:1.0:Group": params["urn:scim:schemas:extension:byndid:1.0:Group"] },
+        body: applyRemap({ "schemas": params["schemas"], "displayName": params["displayName"], "members": params["members"], "urn:scim:schemas:extension:byndid:1.0:Group": params["urn_scim_schemas_extension_byndid_1.0_Group"] }, {"_ref":"$ref","urn_scim_schemas_extension_byndid_1.0_Group":"urn:scim:schemas:extension:byndid:1.0:Group"}),
       },
         );
         return {

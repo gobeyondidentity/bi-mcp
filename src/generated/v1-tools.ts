@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ApiClient } from "../client.js";
 import { ApiError } from "../types.js";
+import { applyRemap } from "../remap.js";
 
 export function registerV1Tools(
   server: McpServer,
@@ -2770,7 +2771,7 @@ export function registerV1Tools(
     "givenName": z.string().describe("The given name of the user, or first name in most Western languages.\n").optional(),
     "familyName": z.string().describe("The family name of the user, or last name in most Western languages.\n").optional(),
   }).describe("Definition of the user's name.").optional(),
-    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": z.object({
+    "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": z.object({
     "employeeNumber": z.string().describe("A string identifier, typically numeric or alphanumeric, assigned to a person, typically based on order of hire or association with an organization as defined in [RFC 7643](https://datatracker.ietf.org").optional(),
     "costCenter": z.string().describe("Identifies the name of a cost center as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
     "organization": z.string().describe("Identifies the name of an organization as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
@@ -2793,7 +2794,7 @@ export function registerV1Tools(
           "POST",
           "/v1/tenants/{tenant_id}/realms/{realm_id}/scim/v2/Users", {
         pathParams: { realm_id: params["realm_id"] as string },
-        body: { "user": params["user"] },
+        body: applyRemap({ "user": params["user"] }, {"urn_ietf_params_scim_schemas_extension_enterprise_2.0_User":"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"}),
       },
         );
         return {
@@ -2867,7 +2868,7 @@ export function registerV1Tools(
     "givenName": z.string().describe("The given name of the user, or first name in most Western languages.\n").optional(),
     "familyName": z.string().describe("The family name of the user, or last name in most Western languages.\n").optional(),
   }).describe("Definition of the user's name.").optional(),
-    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": z.object({
+    "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": z.object({
     "employeeNumber": z.string().describe("A string identifier, typically numeric or alphanumeric, assigned to a person, typically based on order of hire or association with an organization as defined in [RFC 7643](https://datatracker.ietf.org").optional(),
     "costCenter": z.string().describe("Identifies the name of a cost center as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
     "organization": z.string().describe("Identifies the name of an organization as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
@@ -2890,7 +2891,7 @@ export function registerV1Tools(
           "PUT",
           "/v1/tenants/{tenant_id}/realms/{realm_id}/scim/v2/Users/{user_id}", {
         pathParams: { user_id: params["user_id"] as string, realm_id: params["realm_id"] as string },
-        body: { "user": params["user"] },
+        body: applyRemap({ "user": params["user"] }, {"urn_ietf_params_scim_schemas_extension_enterprise_2.0_User":"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"}),
       },
         );
         return {
@@ -2930,7 +2931,7 @@ export function registerV1Tools(
     "givenName": z.string().describe("The given name of the user, or first name in most Western languages.\n").optional(),
     "familyName": z.string().describe("The family name of the user, or last name in most Western languages.\n").optional(),
   }).describe("Definition of the user's name.").optional(),
-    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": z.object({
+    "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": z.object({
     "employeeNumber": z.string().describe("A string identifier, typically numeric or alphanumeric, assigned to a person, typically based on order of hire or association with an organization as defined in [RFC 7643](https://datatracker.ietf.org").optional(),
     "costCenter": z.string().describe("Identifies the name of a cost center as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
     "organization": z.string().describe("Identifies the name of an organization as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
@@ -2953,7 +2954,7 @@ export function registerV1Tools(
           "PATCH",
           "/v1/tenants/{tenant_id}/realms/{realm_id}/scim/v2/Users/{user_id}", {
         pathParams: { user_id: params["user_id"] as string, realm_id: params["realm_id"] as string },
-        body: { "user": params["user"] },
+        body: applyRemap({ "user": params["user"] }, {"urn_ietf_params_scim_schemas_extension_enterprise_2.0_User":"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"}),
       },
         );
         return {

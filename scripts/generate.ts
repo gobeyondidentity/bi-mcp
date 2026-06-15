@@ -88,9 +88,23 @@ function escapeString(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
 }
 
+// Anthropic tool-schema property keys must match this pattern. SCIM URN keys
+// (and a few others like `$ref`) don't, so we expose a sanitized alias to the
+// agent and remap back to the original key at request time. See src/remap.ts.
+const KEY_PATTERN = /^[a-zA-Z0-9_.-]{1,64}$/;
+
+function sanitizeKey(key: string): string {
+  if (KEY_PATTERN.test(key)) return key;
+  return key.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 64);
+}
+
 // ── JSON Schema → Zod code string ───────────────────────────────────────────
 
-function jsonSchemaToZod(schema: SchemaObject, depth: number = 0): string {
+function jsonSchemaToZod(
+  schema: SchemaObject,
+  remap: Map<string, string>,
+  depth: number = 0,
+): string {
   if (depth > 5) return "z.any()";
 
   // Handle allOf by merging
@@ -106,7 +120,7 @@ function jsonSchemaToZod(schema: SchemaObject, depth: number = 0): string {
       }
     }
     if (Object.keys(merged.properties ?? {}).length > 0) {
-      return jsonSchemaToZod(merged, depth);
+      return jsonSchemaToZod(merged, remap, depth);
     }
     return "z.any()";
   }
@@ -114,13 +128,13 @@ function jsonSchemaToZod(schema: SchemaObject, depth: number = 0): string {
   // Handle oneOf/anyOf
   if (schema.oneOf || schema.anyOf) {
     const variants = (schema.oneOf ?? schema.anyOf)!;
-    if (variants.length === 1) return jsonSchemaToZod(variants[0], depth + 1);
+    if (variants.length === 1) return jsonSchemaToZod(variants[0], remap, depth + 1);
     if (variants.length >= 2) {
-      const first = jsonSchemaToZod(variants[0], depth + 1);
-      const second = jsonSchemaToZod(variants[1], depth + 1);
+      const first = jsonSchemaToZod(variants[0], remap, depth + 1);
+      const second = jsonSchemaToZod(variants[1], remap, depth + 1);
       let result = `z.union([${first}, ${second}`;
       for (let i = 2; i < variants.length; i++) {
-        result += `, ${jsonSchemaToZod(variants[i], depth + 1)}`;
+        result += `, ${jsonSchemaToZod(variants[i], remap, depth + 1)}`;
       }
       result += "])";
       return result;
@@ -150,7 +164,7 @@ function jsonSchemaToZod(schema: SchemaObject, depth: number = 0): string {
       return `z.boolean()${desc}`;
     case "array": {
       const itemsZod = schema.items
-        ? jsonSchemaToZod(schema.items, depth + 1)
+        ? jsonSchemaToZod(schema.items, remap, depth + 1)
         : "z.any()";
       return `z.array(${itemsZod})${desc}`;
     }
@@ -165,10 +179,12 @@ function jsonSchemaToZod(schema: SchemaObject, depth: number = 0): string {
       const fields: string[] = [];
       for (const [key, propSchema] of Object.entries(schema.properties)) {
         if (propSchema.readOnly) continue;
-        const fieldZod = jsonSchemaToZod(propSchema, depth + 1);
+        const safeKey = sanitizeKey(key);
+        if (safeKey !== key) remap.set(safeKey, key);
+        const fieldZod = jsonSchemaToZod(propSchema, remap, depth + 1);
         const isRequired = requiredSet.has(key);
         fields.push(
-          `    ${JSON.stringify(key)}: ${fieldZod}${isRequired ? "" : ".optional()"}`,
+          `    ${JSON.stringify(safeKey)}: ${fieldZod}${isRequired ? "" : ".optional()"}`,
         );
       }
       if (fields.length === 0) return `z.record(z.any())${desc}`;
@@ -311,6 +327,7 @@ function generateToolsFile(
     'import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";',
     'import { ApiClient } from "../client.js";',
     'import { ApiError } from "../types.js";',
+    'import { applyRemap } from "../remap.js";',
     "",
     `export function register${platform === "v1" ? "V1" : "V0"}Tools(`,
     "  server: McpServer,",
@@ -320,6 +337,10 @@ function generateToolsFile(
 
   for (const tool of tools) {
     const inputFields: string[] = [];
+    // Per-tool map of sanitized key → original key. Populated as we walk the
+    // body schema. Anything in here is renamed back to the original at
+    // request-time via applyRemap.
+    const remap = new Map<string, string>();
 
     // Path params as required string fields
     for (const param of tool.pathParams) {
@@ -330,7 +351,7 @@ function generateToolsFile(
 
     // Query params
     for (const qp of tool.queryParams) {
-      const zodType = jsonSchemaToZod(qp.schema, 0);
+      const zodType = jsonSchemaToZod(qp.schema, remap, 0);
       const opt = qp.required ? "" : ".optional()";
       inputFields.push(
         `      ${JSON.stringify(qp.name)}: ${zodType}${opt}.describe("${escapeString(qp.description.slice(0, 200))}")`,
@@ -349,13 +370,15 @@ function generateToolsFile(
           tool.bodySchema.properties,
         )) {
           if ((propSchema as SchemaObject).readOnly) continue;
-          const zodType = jsonSchemaToZod(propSchema as SchemaObject, 0);
+          const safeKey = sanitizeKey(key);
+          if (safeKey !== key) remap.set(safeKey, key);
+          const zodType = jsonSchemaToZod(propSchema as SchemaObject, remap, 0);
           const opt = requiredSet.has(key) ? "" : ".optional()";
-          inputFields.push(`      ${JSON.stringify(key)}: ${zodType}${opt}`);
+          inputFields.push(`      ${JSON.stringify(safeKey)}: ${zodType}${opt}`);
         }
       } else {
         inputFields.push(
-          `      body: ${jsonSchemaToZod(tool.bodySchema, 0)}`,
+          `      body: ${jsonSchemaToZod(tool.bodySchema, remap, 0)}`,
         );
       }
     }
@@ -386,7 +409,10 @@ function generateToolsFile(
         ? `queryParams: { ${queryParamEntries} }`
         : "";
 
-    // Build body — reconstruct the original body shape
+    // Build body — reconstruct the original body shape. Top-level keys are
+    // restored statically (outgoing JSON key = original key, value read from
+    // the sanitized key in params). Any nested renamed keys are restored at
+    // runtime via applyRemap below.
     let bodyExpr = "";
     if (tool.bodySchema) {
       if (
@@ -396,11 +422,15 @@ function generateToolsFile(
       ) {
         const bodyFields = Object.keys(tool.bodySchema.properties)
           .filter((k) => !(tool.bodySchema!.properties![k] as SchemaObject).readOnly)
-          .map((k) => `${JSON.stringify(k)}: params[${JSON.stringify(k)}]`)
+          .map((k) => `${JSON.stringify(k)}: params[${JSON.stringify(sanitizeKey(k))}]`)
           .join(", ");
         bodyExpr = `body: { ${bodyFields} }`;
       } else {
         bodyExpr = "body: params.body";
+      }
+      if (remap.size > 0) {
+        const remapObj = JSON.stringify(Object.fromEntries(remap));
+        bodyExpr = `body: applyRemap(${bodyExpr.slice("body: ".length)}, ${remapObj})`;
       }
     }
 
