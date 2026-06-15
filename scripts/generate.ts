@@ -3,6 +3,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import $RefParser from "@apidevtools/json-schema-ref-parser";
+import { sanitizeKey } from "../src/keys.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
@@ -86,16 +87,6 @@ function operationIdToSnakeCase(opId: string): string {
 
 function escapeString(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
-}
-
-// Anthropic tool-schema property keys must match this pattern. SCIM URN keys
-// (and a few others like `$ref`) don't, so we expose a sanitized alias to the
-// agent and remap back to the original key at request time. See src/remap.ts.
-const KEY_PATTERN = /^[a-zA-Z0-9_.-]{1,64}$/;
-
-function sanitizeKey(key: string): string {
-  if (KEY_PATTERN.test(key)) return key;
-  return key.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 64);
 }
 
 // ── JSON Schema → Zod code string ───────────────────────────────────────────
