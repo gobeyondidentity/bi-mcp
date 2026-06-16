@@ -52,6 +52,7 @@ That's it. The server extracts your tenant ID from the JWT and determines the co
 |----------|----------|---------|-------------|
 | `API_KEY` | Yes | — | Beyond Identity API key (JWT). Obtained from the admin console under Settings > API Access. |
 | `REGION` | No | `US` | `US` or `EU`. Determines the API base URL. |
+| `BASE_URL` | No | _(computed from platform + region)_ | Override the API host. Use for non-production environments (e.g. staging, local mock). When set, takes precedence over `REGION`. |
 
 ## How It Works
 

@@ -9,6 +9,7 @@ import { registerV1Tools } from "./generated/v1-tools.js";
 import { registerV0Tools } from "./generated/v0-tools.js";
 import { V1_TOOL_REGISTRY } from "./generated/v1-registry.js";
 import { V0_TOOL_REGISTRY } from "./generated/v0-registry.js";
+import pkg from "../package.json" with { type: "json" };
 
 const config = loadConfig();
 const apiClient = new ApiClient(config);
@@ -27,7 +28,7 @@ if (process.env.BASE_URL) {
 const registry = config.platform === "v1" ? V1_TOOL_REGISTRY : V0_TOOL_REGISTRY;
 
 const server = new McpServer(
-  { name: "beyond-identity", version: "1.0.0" },
+  { name: "beyond-identity", version: pkg.version },
   {
     instructions: `This MCP server provides tools for managing Beyond Identity ${platformLabel} resources. Use the 'search_tools' tool to discover available operations. ${
       config.platform === "v1"

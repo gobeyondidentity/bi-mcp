@@ -19,17 +19,12 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
     );
   }
 
-  let decoded: string;
-  try {
-    // Handle base64url encoding (replace - with +, _ with /, add padding)
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-    decoded = Buffer.from(padded, "base64").toString("utf-8");
-  } catch {
-    throw new Error(
-      "API_KEY contains an invalid JWT (payload is not valid base64)",
-    );
-  }
+  // Note: Buffer.from(..., "base64") doesn't throw on malformed input — it
+  // returns whatever it can decode and lets the downstream JSON.parse surface
+  // the error. So the only failure mode here is "bad payload" via JSON.parse.
+  const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  const decoded = Buffer.from(padded, "base64").toString("utf-8");
 
   let payload: unknown;
   try {
@@ -82,6 +77,15 @@ export function loadConfig(): Config {
   const region: Region = regionInput as Region;
 
   const claims = decodeJwtPayload(apiToken);
+
+  // Fail fast on already-expired tokens — every API call would 401 otherwise,
+  // with a confusing runtime error rather than a clear startup one.
+  if (typeof claims.exp === "number" && claims.exp * 1000 < Date.now()) {
+    throw new Error(
+      `API_KEY JWT expired on ${new Date(claims.exp * 1000).toISOString()}. Generate a fresh token from the admin console.`,
+    );
+  }
+
   const { platform, tenantId } = detectPlatform(claims);
   const baseUrl = process.env.BASE_URL || BASE_URLS[platform][region];
 

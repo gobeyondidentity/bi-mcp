@@ -25,15 +25,16 @@ export class ApiClient {
   ): Promise<unknown> {
     let path = pathTemplate;
 
-    // For v1: inject tenant_id from config
+    // For v1: inject tenant_id from config. URL-encode for consistency with
+    // other path params, and replaceAll so duplicate placeholders all fill.
     if (this.platform === "v1") {
-      path = path.replace("{tenant_id}", this.tenantId);
+      path = path.replaceAll("{tenant_id}", encodeURIComponent(this.tenantId));
     }
 
     // Substitute remaining path params
     if (options?.pathParams) {
       for (const [key, value] of Object.entries(options.pathParams)) {
-        path = path.replace(`{${key}}`, encodeURIComponent(value));
+        path = path.replaceAll(`{${key}}`, encodeURIComponent(value));
       }
     }
 

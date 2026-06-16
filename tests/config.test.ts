@@ -189,6 +189,63 @@ test("BASE_URL env var overrides the platform/region default", () => {
   );
 });
 
+test("expired JWT (past exp claim) throws with a clear message", () => {
+  const pastExp = Math.floor(Date.now() / 1000) - 60; // one minute ago
+  withEnv(
+    {
+      API_KEY: makeJwt({ bi_t: "t", exp: pastExp }),
+      REGION: undefined,
+      BASE_URL: undefined,
+    },
+    () => {
+      assert.throws(() => loadConfig(), /API_KEY JWT expired on /);
+    },
+  );
+});
+
+test("JWT with future exp is accepted", () => {
+  const futureExp = Math.floor(Date.now() / 1000) + 3600; // one hour from now
+  withEnv(
+    {
+      API_KEY: makeJwt({ bi_t: "t", exp: futureExp }),
+      REGION: undefined,
+      BASE_URL: undefined,
+    },
+    () => {
+      const cfg = loadConfig();
+      assert.equal(cfg.platform, "v1");
+    },
+  );
+});
+
+test("JWT without exp claim is accepted (don't break on tokens that omit it)", () => {
+  withEnv(
+    {
+      API_KEY: makeJwt({ bi_t: "t" }),
+      REGION: undefined,
+      BASE_URL: undefined,
+    },
+    () => {
+      const cfg = loadConfig();
+      assert.equal(cfg.tenantId, "t");
+    },
+  );
+});
+
+test("non-number exp claim is ignored (defensive)", () => {
+  // Spec-noncompliant tokens with string exp shouldn't crash startup.
+  withEnv(
+    {
+      API_KEY: makeJwt({ bi_t: "t", exp: "not-a-number" }),
+      REGION: undefined,
+      BASE_URL: undefined,
+    },
+    () => {
+      assert.doesNotThrow(() => loadConfig());
+    },
+  );
+});
+
 test("empty bi_t falls back to sub", () => {
   withEnv(
     {

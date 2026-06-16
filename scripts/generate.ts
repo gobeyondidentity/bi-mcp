@@ -72,7 +72,10 @@ interface ToolDef {
     schema: SchemaObject;
   }>;
   bodySchema: SchemaObject | null;
-  bodyContentType: string;
+  // Whether the OpenAPI requestBody.required flag is true — i.e. the body as a
+  // whole must be present. If false, every body field is emitted as optional
+  // regardless of its individual `required` membership.
+  bodyRequired: boolean;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -319,18 +322,15 @@ function extractTools(
 
       // Request body
       let bodySchema: SchemaObject | null = null;
-      let bodyContentType = "application/json";
       if (operation.requestBody?.content) {
-        for (const [ct, mediaType] of Object.entries(
-          operation.requestBody.content,
-        )) {
+        for (const mediaType of Object.values(operation.requestBody.content)) {
           if (mediaType.schema) {
             bodySchema = mediaType.schema;
-            bodyContentType = ct;
             break;
           }
         }
       }
+      const bodyRequired = operation.requestBody?.required === true;
 
       tools.push({
         name,
@@ -342,10 +342,14 @@ function extractTools(
         pathParams,
         queryParams,
         bodySchema,
-        bodyContentType,
+        bodyRequired,
       });
     }
   }
+
+  // Sort by tool name so generated-file diffs are stable across spec re-downloads
+  // that may shuffle path ordering.
+  tools.sort((a, b) => a.name.localeCompare(b.name));
 
   return tools;
 }
@@ -378,23 +382,30 @@ function generateToolsFile(
     // request-time via applyRemap.
     const remap = new Map<string, string>();
 
-    // Path params as required string fields
+    // Path params as required string fields. Names are sanitized — agents see
+    // the safe form; the handler maps back to the original at request time.
     for (const param of tool.pathParams) {
+      const safeName = sanitizeKey(param.name);
+      if (safeName !== param.name) recordRemap(remap, safeName, param.name);
       inputFields.push(
-        `      ${JSON.stringify(param.name)}: z.string().describe("${escapeString(param.description.slice(0, 200))}")`,
+        `      ${JSON.stringify(safeName)}: z.string().describe("${escapeString(param.description.slice(0, 200))}")`,
       );
     }
 
-    // Query params
+    // Query params (same sanitization treatment as path params)
     for (const qp of tool.queryParams) {
+      const safeName = sanitizeKey(qp.name);
+      if (safeName !== qp.name) recordRemap(remap, safeName, qp.name);
       const zodType = jsonSchemaToZod(qp.schema, remap, 0);
       const opt = qp.required ? "" : ".optional()";
       inputFields.push(
-        `      ${JSON.stringify(qp.name)}: ${zodType}${opt}.describe("${escapeString(qp.description.slice(0, 200))}")`,
+        `      ${JSON.stringify(safeName)}: ${zodType}${opt}.describe("${escapeString(qp.description.slice(0, 200))}")`,
       );
     }
 
-    // Request body — flatten one level if it's an object with properties
+    // Request body — flatten one level if it's an object with properties.
+    // If the entire body is optional per OpenAPI, every field is .optional()
+    // regardless of its membership in the schema's `required` array.
     if (tool.bodySchema) {
       if (
         tool.bodySchema.type === "object" &&
@@ -409,13 +420,14 @@ function generateToolsFile(
           const safeKey = sanitizeKey(key);
           if (safeKey !== key) recordRemap(remap, safeKey, key);
           const zodType = jsonSchemaToZod(propSchema as SchemaObject, remap, 0);
-          const opt = requiredSet.has(key) ? "" : ".optional()";
+          const opt =
+            tool.bodyRequired && requiredSet.has(key) ? "" : ".optional()";
           inputFields.push(`      ${JSON.stringify(safeKey)}: ${zodType}${opt}`);
         }
       } else {
-        inputFields.push(
-          `      body: ${jsonSchemaToZod(tool.bodySchema, remap, 0)}`,
-        );
+        const inner = jsonSchemaToZod(tool.bodySchema, remap, 0);
+        const opt = tool.bodyRequired ? "" : ".optional()";
+        inputFields.push(`      body: ${inner}${opt}`);
       }
     }
 
@@ -424,20 +436,25 @@ function generateToolsFile(
     if (tool.method === "GET") annotationParts.push("readOnlyHint: true");
     if (tool.method === "DELETE") annotationParts.push("destructiveHint: true");
 
-    // Build the path params mapping for the handler
+    // Build the path params mapping for the handler. Outgoing key is the
+    // ORIGINAL spec name (the path template's `{placeholder}`); we read from
+    // the SAFE name on the agent's params.
     const pathParamEntries = tool.pathParams
-      .map((p) => `${p.name}: params[${JSON.stringify(p.name)}] as string`)
+      .map(
+        (p) =>
+          `${p.name}: params[${JSON.stringify(sanitizeKey(p.name))}] as string`,
+      )
       .join(", ");
     const pathParamsObj =
       pathParamEntries.length > 0
         ? `pathParams: { ${pathParamEntries} }`
         : "";
 
-    // Build the query params mapping
+    // Build the query params mapping (same outgoing-vs-incoming key dance).
     const queryParamEntries = tool.queryParams
       .map(
         (qp) =>
-          `${JSON.stringify(qp.name)}: params[${JSON.stringify(qp.name)}] as string | number | boolean | undefined`,
+          `${JSON.stringify(qp.name)}: params[${JSON.stringify(sanitizeKey(qp.name))}] as string | number | boolean | undefined`,
       )
       .join(", ");
     const queryParamsObj =

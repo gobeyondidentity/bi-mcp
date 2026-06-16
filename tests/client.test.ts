@@ -70,6 +70,45 @@ test("v1 client injects tenant_id into the path", async () => {
   }
 });
 
+test("v1 client URL-encodes the injected tenant_id", async () => {
+  // Tenant IDs from real JWTs are UUIDs (no special chars), but a defensive
+  // encode-on-injection guarantees a malformed tenant claim can't escape its
+  // path segment. Reuse the standard config but with a tenant ID containing
+  // chars that need encoding.
+  const stub = installFetchStub(jsonResponse({}));
+  try {
+    const client = new ApiClient({ ...V1_CONFIG, tenantId: "a/b c?d" });
+    await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    assert.equal(
+      stub.calls[0].url,
+      "https://api.example.com/v1/tenants/a%2Fb%20c%3Fd/realms",
+    );
+  } finally {
+    stub.restore();
+  }
+});
+
+test("v1 client fills ALL occurrences of a duplicated placeholder (replaceAll)", async () => {
+  // Synthetic path with duplicate placeholders to guard against a regression
+  // back to first-match replace, which would leave the second {tenant_id}/{realm_id}
+  // as a literal in the outgoing URL.
+  const stub = installFetchStub(jsonResponse({}));
+  try {
+    const client = new ApiClient(V1_CONFIG);
+    await client.request(
+      "GET",
+      "/v1/tenants/{tenant_id}/realms/{realm_id}/clone/{tenant_id}/from/{realm_id}",
+      { pathParams: { realm_id: "r-1" } },
+    );
+    assert.equal(
+      stub.calls[0].url,
+      "https://api.example.com/v1/tenants/tenant-xyz/realms/r-1/clone/tenant-xyz/from/r-1",
+    );
+  } finally {
+    stub.restore();
+  }
+});
+
 test("v0 client leaves {tenant_id} placeholders untouched", async () => {
   // v0 paths never use {tenant_id} in practice, but this asserts the
   // platform branch in client.ts that skips tenant injection on v0. The literal

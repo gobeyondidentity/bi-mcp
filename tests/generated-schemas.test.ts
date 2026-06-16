@@ -145,6 +145,36 @@ test("v1 SCIM user tools keep their wrapper structure (URN nested under `user`)"
   }
 });
 
+test("update_tenant body field is .optional() because OpenAPI requestBody is not marked required", () => {
+  // The v1 update_tenant operation's requestBody has no `required: true` flag,
+  // so per the OpenAPI default it's optional as a whole. The generator should
+  // mark the top-level `tenant` body field optional even though it appears in
+  // the schema's `required` array.
+  const tool = v1Tools.find((t) => t.name === "update_tenant");
+  assert.ok(tool, "update_tenant not registered on v1");
+  const tenantField = tool!.config.inputSchema?.tenant;
+  assert.ok(tenantField, "expected `tenant` field at top of update_tenant inputSchema");
+  assert.ok(
+    tenantField.isOptional(),
+    "expected `tenant` to be marked optional when requestBody.required !== true",
+  );
+});
+
+test("tools are sorted alphabetically by name (deterministic output)", () => {
+  for (let i = 1; i < v1Tools.length; i++) {
+    assert.ok(
+      v1Tools[i - 1].name.localeCompare(v1Tools[i].name) <= 0,
+      `v1 tools out of order: "${v1Tools[i - 1].name}" before "${v1Tools[i].name}"`,
+    );
+  }
+  for (let i = 1; i < v0Tools.length; i++) {
+    assert.ok(
+      v0Tools[i - 1].name.localeCompare(v0Tools[i].name) <= 0,
+      `v0 tools out of order: "${v0Tools[i - 1].name}" before "${v0Tools[i].name}"`,
+    );
+  }
+});
+
 test("read-only annotation set on GET tools (sampled)", () => {
   const getTenant = v1Tools.find((t) => t.name === "get_tenant");
   assert.ok(getTenant);
