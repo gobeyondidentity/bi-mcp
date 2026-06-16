@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { ApiClient } from "../src/client.js";
 import { ApiError } from "../src/types.js";
 import type { Config } from "../src/types.js";
+import { jsonResponse } from "./helpers/integration.js";
 
 const V1_CONFIG: Config = {
   apiToken: "test-token",
@@ -25,8 +26,6 @@ interface CapturedCall {
   init: RequestInit;
 }
 
-type FetchStub = (response: Response) => CapturedCall[];
-
 function installFetchStub(response: Response): {
   calls: CapturedCall[];
   restore: () => void;
@@ -46,13 +45,6 @@ function installFetchStub(response: Response): {
       globalThis.fetch = original;
     },
   };
-}
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
 }
 
 test("v1 client injects tenant_id into the path", async () => {
