@@ -173,7 +173,13 @@ async function runHandlerSmoke(platform: "v0" | "v1") {
 
       const schema = zodSchemas[tool.name];
       if (!schema) {
-        skipped.push(`${tool.name} (no captured schema)`);
+        // A tool registered on the real server but missing from the captured
+        // schemas map indicates registration drift between captureZodSchemas
+        // and the live registration path — a real bug, not a synthesizer limit.
+        failures.push({
+          name: tool.name,
+          reason: "no captured schema (stub/server registration drift)",
+        });
         continue;
       }
       const args = synthesizeArgs(schema);

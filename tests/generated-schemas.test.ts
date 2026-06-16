@@ -145,18 +145,20 @@ test("v1 SCIM user tools keep their wrapper structure (URN nested under `user`)"
   }
 });
 
-test("update_tenant body field is .optional() because OpenAPI requestBody is not marked required", () => {
-  // The v1 update_tenant operation's requestBody has no `required: true` flag,
-  // so per the OpenAPI default it's optional as a whole. The generator should
-  // mark the top-level `tenant` body field optional even though it appears in
-  // the schema's `required` array.
+test("update_tenant body field is required when the spec's required[] lists it", () => {
+  // The v1 update_tenant body schema lists `tenant` in its required[] array.
+  // The generator honors field-level required regardless of requestBody.required,
+  // because OpenAPI semantics say required[] applies when the body is sent, and
+  // MCP has no way to model "all-or-nothing on top-level args". The stricter
+  // interpretation prevents description ↔ schema drift like scim_create_user had
+  // pre-fix (description claimed required fields, schema marked them optional).
   const tool = v1Tools.find((t) => t.name === "update_tenant");
   assert.ok(tool, "update_tenant not registered on v1");
   const tenantField = tool!.config.inputSchema?.tenant;
   assert.ok(tenantField, "expected `tenant` field at top of update_tenant inputSchema");
   assert.ok(
-    tenantField.isOptional(),
-    "expected `tenant` to be marked optional when requestBody.required !== true",
+    !tenantField.isOptional(),
+    "expected `tenant` to be required because spec lists it in required[]",
   );
 });
 

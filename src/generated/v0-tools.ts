@@ -57,7 +57,7 @@ export function registerV0Tools(
     "short_code_delivery_details": z.object({
     "expire_time": z.string().describe("A time value in the ISO8601 combined date and time format that represents the time the short code will expire. This field is immutable. The expire time is at most 15 minutes from the creation time of ").optional(),
   }).describe("Details about the short code. Only present if `delivery_method` is `SHORT_CODE`.\n").optional(),
-  }).describe("A binding job tracks the process of binding a new credential for a user.\n").optional(),
+  }).describe("A binding job tracks the process of binding a new credential for a user.\n"),
       "ttl_seconds": z.number().describe("Number of seconds until the binding job expires. This must be between 1 minute (60 seconds) and 15 minutes (900 seconds). This field is used only if the `expire_time` on the requested binding job is u").optional(),
       },
     },
@@ -93,7 +93,7 @@ export function registerV0Tools(
       "group": z.object({
     "name": z.string().describe("A required unique name for the group within the tenant.\n").optional(),
     "description": z.string().describe("A required description for the group within the tenant.\n").optional(),
-  }).describe("A group is a collection of members within an organization that uses Beyond Identity.\n").optional(),
+  }).describe("A group is a collection of members within an organization that uses Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -130,7 +130,7 @@ export function registerV0Tools(
     "email_address": z.string().describe("A required email address serving as primary contact for user.\n").optional(),
     "username": z.string().describe("A required username for the user.").optional(),
     "display_name": z.string().describe("A required human-readable name for the user that is used for display purposes.\n").optional(),
-  }).describe("A user is a member of an organization that uses Beyond Identity.\n").optional(),
+  }).describe("A user is a member of an organization that uses Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -729,8 +729,8 @@ export function registerV0Tools(
     {
       description: "Create a group via SCIM. Requires displayName. Cannot use reserved permission group names. Optionally include members and description. All member IDs must reference existing users.",
       inputSchema: {
-      "schemas": z.array(z.string()).describe("The list of schemas used to define the group. This must contain the core Group schema (\"urn:ietf:params:scim:schemas:core:2.0:Group\") and may include the custom Beyond Identity Group schema extension ").optional(),
-      "displayName": z.string().describe("The unique display name of the group. This name is used for display purposes.\n").optional(),
+      "schemas": z.array(z.string()).describe("The list of schemas used to define the group. This must contain the core Group schema (\"urn:ietf:params:scim:schemas:core:2.0:Group\") and may include the custom Beyond Identity Group schema extension "),
+      "displayName": z.string().describe("The unique display name of the group. This name is used for display purposes.\n"),
       "members": z.array(z.object({
     "display": z.string().describe("The display name of the group member, primarily used for display purposes.\n").optional(),
     "value": z.string().describe("ID of the user resource corresponding to the group member. This field is immutable.\n").optional(),
@@ -771,16 +771,16 @@ export function registerV0Tools(
     {
       description: "Create a user via SCIM. Requires externalId, userName, displayName, active, name (givenName, familyName), and emails (at least one primary). On conflict (duplicate externalId/userName), the existing user is reactivated instead of failing.",
       inputSchema: {
-      "schemas": z.array(z.string()).describe("The list of schemas used to define the user. This must contain only the core User schema (\"urn:ietf:params:scim:schemas:core:2.0:User\").\n").optional(),
-      "externalId": z.string().describe("The provisioning client's unique identifier for the resource. This value must be unique across all users.\n").optional(),
-      "userName": z.string().describe("The unique username of the user. The value of this field will be returned as the subject of an OIDC ID Token.\n").optional(),
-      "displayName": z.string().describe("Display name of the User. This name is used for display purposes.\n").optional(),
-      "active": z.boolean().describe("Indicator for the user's administrative status. If true, the user has administrative capabilities.\n").optional(),
+      "schemas": z.array(z.string()).describe("The list of schemas used to define the user. This must contain only the core User schema (\"urn:ietf:params:scim:schemas:core:2.0:User\").\n"),
+      "externalId": z.string().describe("The provisioning client's unique identifier for the resource. This value must be unique across all users.\n"),
+      "userName": z.string().describe("The unique username of the user. The value of this field will be returned as the subject of an OIDC ID Token.\n"),
+      "displayName": z.string().describe("Display name of the User. This name is used for display purposes.\n"),
+      "active": z.boolean().describe("Indicator for the user's administrative status. If true, the user has administrative capabilities.\n"),
       "emails": z.array(z.object({
     "primary": z.boolean().describe("Indicator for the primary email address. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email ").optional(),
     "value": z.string().describe("The email address. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email addresses are provided").optional(),
     "type": z.enum(["work", "home", "other"]).describe("The type of email address. Valid values are \"work\", \"home\", and \"other\" as defined in [RFC 7643](https://www.rfc-editor.org/rfc/rfc7643).\nImportant notes about email handling: - Only one email address").optional(),
-  }).describe("Email addresses for the user. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email addresses a")).describe("The list containing the user's emails. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email ad").optional(),
+  }).describe("Email addresses for the user. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email addresses a")).describe("The list containing the user's emails. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email ad"),
       "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": z.object({
     "employeeNumber": z.string().describe("The identifier assigned to a user within the enterprise, often a numerical or alphanumeric code.\n").optional(),
   }).describe("A string identifier, typically numeric or alphanumeric, assigned to a person, typically based on order of hire or association as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#sec").optional(),
@@ -1043,7 +1043,7 @@ export function registerV0Tools(
     "meta": z.object({
     "resourceType": z.string().describe("The name of the resource type of the resource."),
   }).describe("Resource metadata as defined in [RFC 7643 Section 3.1](https://www.rfc-editor.org/rfc/rfc7643#section-3.1). This attribute is only populated on responses and is ignored on requests.\n").optional(),
-  }).describe("A user represents a human entity as defined by\n[RFC 7643 Section 4.1](https://www.rfc-editor.org/rfc/rfc7643#section-4.1).\n\nThe externalId attribute must be unique across all users in the system.\n").optional(),
+  }).describe("A user represents a human entity as defined by\n[RFC 7643 Section 4.1](https://www.rfc-editor.org/rfc/rfc7643#section-4.1).\n\nThe externalId attribute must be unique across all users in the system.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -1077,12 +1077,12 @@ export function registerV0Tools(
       description: "Partially update a SCIM group via PATCH operations. Supports adding/removing members subject to a max batch size limit.",
       inputSchema: {
       "group_id": z.string().describe("ID of the group."),
-      "schemas": z.array(z.string()).optional(),
+      "schemas": z.array(z.string()),
       "Operations": z.array(z.object({
     "op": z.enum(["add", "remove", "replace"]),
     "path": z.string().optional(),
     "value": z.record(z.any()).describe("The value to be updated. The structure of the value is dependent on the path. Please refer to the examples for proper request formatting.\nFor example, the value for the path \"members\" must be an array"),
-  })).optional(),
+  })),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -1116,12 +1116,12 @@ export function registerV0Tools(
       description: "Partially update a SCIM user via PATCH operations (add, remove, replace). Operations are executed in order. Supports optimistic locking via version headers.",
       inputSchema: {
       "user_id": z.string().describe("ID of the user."),
-      "schemas": z.array(z.string()).optional(),
+      "schemas": z.array(z.string()),
       "Operations": z.array(z.object({
     "op": z.enum(["add", "replace"]).describe("The operation to be performed. The operation follows the SCIM specification for PATCH operations. Please refer to the [SCIM specification](https://datatracker.ietf.org/doc/html/rfc7644#section-3.5.2) "),
     "path": z.string().describe("The path to the attribute to be updated. The path follows the SCIM specification for PATCH operations. Please refer to the [SCIM specification](https://datatracker.ietf.org/doc/html/rfc7644#section-3.").optional(),
     "value": z.record(z.any()).describe("The value to be updated. The structure of the value is dependent on the path. Please refer to the examples for proper request formatting.\nFor example, the value for the path \"emails\" must be an array "),
-  })).optional(),
+  })),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -1157,7 +1157,7 @@ export function registerV0Tools(
       "passkey_id": z.string().describe("A unique identifier for a passkey."),
       "tags": z.array(z.object({
     "name": z.string().describe("Name of the tag. Case-insensitive.\n"),
-  })).describe("List of tags to set on the passkey. Tags are identified by name, which is case-insensitive and unique per tenant. Tags are created automatically if they do not already exist.\n").optional(),
+  })).describe("List of tags to set on the passkey. Tags are identified by name, which is case-insensitive and unique per tenant. Tags are created automatically if they do not already exist.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -1194,7 +1194,7 @@ export function registerV0Tools(
       "group": z.object({
     "name": z.string().describe("A required unique name for the group within the tenant.\n").optional(),
     "description": z.string().describe("A required description for the group within the tenant.\n").optional(),
-  }).describe("A group is a collection of members within an organization that uses Beyond Identity.\n").optional(),
+  }).describe("A group is a collection of members within an organization that uses Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -1233,7 +1233,7 @@ export function registerV0Tools(
     "email_address": z.string().describe("A required email address serving as primary contact for user.\n").optional(),
     "username": z.string().describe("A required username for the user.").optional(),
     "display_name": z.string().describe("A required human-readable name for the user that is used for display purposes.\n").optional(),
-  }).describe("A user is a member of an organization that uses Beyond Identity.\n").optional(),
+  }).describe("A user is a member of an organization that uses Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {

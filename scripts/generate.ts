@@ -420,8 +420,12 @@ function generateToolsFile(
           const safeKey = sanitizeKey(key);
           if (safeKey !== key) recordRemap(remap, safeKey, key);
           const zodType = jsonSchemaToZod(propSchema as SchemaObject, remap, 0);
-          const opt =
-            tool.bodyRequired && requiredSet.has(key) ? "" : ".optional()";
+          // Honor the field-level required[] regardless of requestBody.required.
+          // Per OpenAPI semantics, required[] applies when the body is sent;
+          // since MCP has no way to model "all-or-nothing on top-level args",
+          // we choose the stricter interpretation. Tools whose body really is
+          // optional-as-a-whole simply have an empty required[].
+          const opt = requiredSet.has(key) ? "" : ".optional()";
           inputFields.push(`      ${JSON.stringify(safeKey)}: ${zodType}${opt}`);
         }
       } else {

@@ -17,7 +17,7 @@ export function registerV1Tools(
       inputSchema: {
       "realm_id": z.string().describe("A unique identifier for a realm."),
       "group_id": z.string().describe("A unique identifier for a group."),
-      "identity_ids": z.array(z.string()).describe("IDs of the identities to be added to the group.").optional(),
+      "identity_ids": z.array(z.string()).describe("IDs of the identities to be added to the group."),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -52,7 +52,7 @@ export function registerV1Tools(
       inputSchema: {
       "realm_id": z.string().describe("A unique identifier for a realm."),
       "sso_config_id": z.string().describe("A unique identifier of the sso configuration"),
-      "group_ids": z.array(z.string()).describe("IDs of the groups to be added to the sso config.").optional(),
+      "group_ids": z.array(z.string()).describe("IDs of the groups to be added to the sso config."),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -87,7 +87,7 @@ export function registerV1Tools(
       inputSchema: {
       "realm_id": z.string().describe("A unique identifier for a realm."),
       "sso_config_id": z.string().describe("A unique identifier of the sso configuration"),
-      "identity_ids": z.array(z.string()).describe("IDs of the identities to be added to the sso config.").optional(),
+      "identity_ids": z.array(z.string()).describe("IDs of the identities to be added to the sso config."),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -160,7 +160,7 @@ export function registerV1Tools(
       "realm_id": z.string().describe("A unique identifier for a realm."),
       "resource_server_id": z.string().describe("A unique identifier for a resource server."),
       "role_id": z.string().describe("A unique identifier for a role."),
-      "scopes": z.array(z.string()).describe("Scopes to be assigned to the role.").optional(),
+      "scopes": z.array(z.string()).describe("Scopes to be assigned to the role."),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -228,7 +228,7 @@ export function registerV1Tools(
       description: "Delete 1–1000 identities in a single atomic operation. Provide an array of identity_ids. No duplicates allowed. All-or-nothing: if any ID is invalid, none are deleted. Each deleted identity is removed from groups and has roles revoked.",
       inputSchema: {
       "realm_id": z.string().describe("A unique identifier for a realm."),
-      "ids": z.array(z.string()).describe("IDs of the identities to be deleted.").optional(),
+      "ids": z.array(z.string()).describe("IDs of the identities to be deleted."),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -335,7 +335,7 @@ export function registerV1Tools(
   })).describe("This structure describes additional attributes that can be attached to SAML assertion.\n"),
     "use_short_url": z.boolean().describe("Changes the EntityID in the SAML response to a shorter version. This is to support applications with URL restrictions.").optional(),
   })]).optional(),
-  }).describe("An application represents a client application that uses Beyond Identity for authentication. This could be a native app, a single-page application, regular web application, or machine-to-machine appli").optional(),
+  }).describe("An application represents a client application that uses Beyond Identity for authentication. This could be a native app, a single-page application, regular web application, or machine-to-machine appli"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -406,7 +406,7 @@ export function registerV1Tools(
     "allowed_user_ids": z.array(z.string()).describe("If allowed_user_ids is not nil and not empty, roaming auth will only be offered to specified users. Note that the user is determined _before_ authentication using a best effort lookup by login_hint, i").optional(),
   }).describe("The roaming_auth_config offers advanced configuration options for the roaming auth feature.").optional(),
   }).describe("Configuration options for the platform authenticator.")]).optional(),
-  }).describe("Representation of an authenticator configuration. This prescribes how an identity may authenticate themselves with Beyond Identity.\n").optional(),
+  }).describe("Representation of an authenticator configuration. This prescribes how an identity may authenticate themselves with Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -467,7 +467,7 @@ export function registerV1Tools(
   }).describe("Representation of an authenticator configuration. This prescribes how an identity may authenticate themselves with Beyond Identity.\n").optional(),
     "authenticator_config_id": z.string().describe("The ID of the authenticator configuration to be used to build the credential binding job. This field is immutable.\n").optional(),
   }).describe("A batch credential binding job template provides a template for the credential binding jobs created via a batch.\n"),
-  }).describe("A batch credential binding job manages the binding of credentials for multiple identities in a batch operation.\n").optional(),
+  }).describe("A batch credential binding job manages the binding of credentials for multiple identities in a batch operation.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -528,7 +528,7 @@ export function registerV1Tools(
   }).describe("Configuration options for credential enrollment, enabling an identity to access the Beyond Identity Console. These options support both IDP-authorized flows and non-verified enrollment pathways.\n")]).optional(),
   }).describe("Representation of an authenticator configuration. This prescribes how an identity may authenticate themselves with Beyond Identity.\n").optional(),
     "authenticator_config_id": z.string().describe("The ID of the authenticator configuration to be used to build the credential binding job. This field is immutable.\n").optional(),
-  }).describe("A credential binding job defines the state of binding a new credential to an identity. The state includes creation of the credential binding job to delivery of the credential binding method to complet").optional(),
+  }).describe("A credential binding job defines the state of binding a new credential to an identity. The state includes creation of the credential binding job to delivery of the credential binding method to complet"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -565,7 +565,7 @@ export function registerV1Tools(
       "group": z.object({
     "display_name": z.string().describe("A human-readable name for the group. This name is used for display purposes.\n").optional(),
     "description": z.string().describe("A free-form text field to describe a group.\n").optional(),
-  }).describe("A group is a logical collection of identities. Groups are commonly used as a predicate in a policy rule.\n").optional(),
+  }).describe("A group is a logical collection of identities. Groups are commonly used as a predicate in a policy rule.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -638,7 +638,7 @@ export function registerV1Tools(
     "manager_id": z.string().describe("The unique identifier for the user's manager.\n").optional(),
     "manager_name": z.string().describe("The name of the user's manager.\n").optional(),
   }).describe("Set of traits associated with an identity.").optional(),
-  }).describe("An identity is a unique identifier that may be used by an end-user to gain access governed by Beyond Identity.\n").optional(),
+  }).describe("An identity is a unique identifier that may be used by an end-user to gain access governed by Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -672,8 +672,8 @@ export function registerV1Tools(
       description: "Create a new external identity provider for federated authentication. Requires protocol config with type 'oidc_idp', clientId, clientSecret, tokenScopes, jwksUrl, tokenUrl, authorizeUrl, identityAttribute (id/email/username), and identifyingClaimName. PKCE options: disabled, plain, s256.",
       inputSchema: {
       "realm_id": z.string().describe("A unique identifier for a realm."),
-      "display_name": z.string().describe("The human-readable name associated with the identity provider.\n").optional(),
-      "protocol_config": z.any().optional(),
+      "display_name": z.string().describe("The human-readable name associated with the identity provider.\n"),
+      "protocol_config": z.any(),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -709,7 +709,7 @@ export function registerV1Tools(
       "realm": z.object({
     "display_name": z.string().describe("A human-readable name for the realm. This name is used for display purposes.\n").optional(),
     "classification": z.string().describe("Classification of the realm. Can be either SECURE_WORFORCE or SECURE_CUSTOMER").optional(),
-  }).describe("A realm is a unique administrative domain within a tenant. Realms may be used to define multiple development environments or for isolated administrative domains.\n").optional(),
+  }).describe("A realm is a unique administrative domain within a tenant. Realms may be used to define multiple development environments or for isolated administrative domains.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -746,7 +746,7 @@ export function registerV1Tools(
     "display_name": z.string().describe("A human-readable name for the resource server. This name is used for display purposes.\n").optional(),
     "identifier": z.string().describe("The identifier of this resource server entity. This value should be unique per realm and is often presented as a URI, as it should be a unique identifier for an API to which access is being gated. Thi").optional(),
     "scopes": z.array(z.string()).describe("The list of scopes supported by this resource server. For the Beyond Identity Management API, this will include scopes for all publicly available endpoints.  Note that applications may not provide acc").optional(),
-  }).describe("A resource server represents an API server that hosts a set of protected resources and is capable of accepting and responding to protected resource requests using access tokens. Clients can enable the").optional(),
+  }).describe("A resource server represents an API server that hosts a set of protected resources and is capable of accepting and responding to protected resource requests using access tokens. Clients can enable the"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -933,7 +933,7 @@ export function registerV1Tools(
     "is_tile_visible": z.boolean().describe("Indicates if the SSO configuration tile is visible to the user.").optional(),
     "inbound_scim": z.record(z.any()).optional(),
   })]),
-  }).describe("Represents an SSO config as a request body.").optional(),
+  }).describe("Represents an SSO config as a request body."),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -1111,7 +1111,7 @@ export function registerV1Tools(
       inputSchema: {
       "realm_id": z.string().describe("A unique identifier for a realm."),
       "group_id": z.string().describe("A unique identifier for a group."),
-      "identity_ids": z.array(z.string()).describe("IDs of the identities to be removed from the group.").optional(),
+      "identity_ids": z.array(z.string()).describe("IDs of the identities to be removed from the group."),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -1146,7 +1146,7 @@ export function registerV1Tools(
       inputSchema: {
       "realm_id": z.string().describe("A unique identifier for a realm."),
       "sso_config_id": z.string().describe("A unique identifier of the sso configuration"),
-      "group_ids": z.array(z.string()).describe("IDs of the groups to be removed from the sso config.").optional(),
+      "group_ids": z.array(z.string()).describe("IDs of the groups to be removed from the sso config."),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -1181,7 +1181,7 @@ export function registerV1Tools(
       inputSchema: {
       "realm_id": z.string().describe("A unique identifier for a realm."),
       "sso_config_id": z.string().describe("A unique identifier of the sso configuration"),
-      "identity_ids": z.array(z.string()).describe("IDs of the identities to be removed from the sso config.").optional(),
+      "identity_ids": z.array(z.string()).describe("IDs of the identities to be removed from the sso config."),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -1424,7 +1424,7 @@ export function registerV1Tools(
       "realm_id": z.string().describe("A unique identifier for a realm."),
       "resource_server_id": z.string().describe("A unique identifier for a resource server."),
       "role_id": z.string().describe("A unique identifier for a role."),
-      "scopes": z.array(z.string()).describe("Scopes to be removed from the role.").optional(),
+      "scopes": z.array(z.string()).describe("Scopes to be removed from the role."),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -3103,7 +3103,7 @@ export function registerV1Tools(
     "meta": z.object({
     "resourceType": z.string().describe("The name of the resource type of the resource."),
   }).describe("Resource metadata as defined in [RFC 7643 Section 3.1](https://www.rfc-editor.org/rfc/rfc7643#section-3.1). This attribute is only populated on responses and is ignored on requests.\n").optional(),
-  }).describe("A group is a collection of users corresponding to [RFC 7643 Section 4.2](https://www.rfc-editor.org/rfc/rfc7643#section-4.2).\n").optional(),
+  }).describe("A group is a collection of users corresponding to [RFC 7643 Section 4.2](https://www.rfc-editor.org/rfc/rfc7643#section-4.2).\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -3165,7 +3165,7 @@ export function registerV1Tools(
     "meta": z.object({
     "resourceType": z.string().describe("The name of the resource type of the resource."),
   }).describe("Resource metadata as defined in [RFC 7643 Section 3.1](https://www.rfc-editor.org/rfc/rfc7643#section-3.1). This attribute is only populated on responses and is ignored on requests.\n").optional(),
-  }).describe("A user represents a human entity as defined by [RFC 7643 Section 4.1](https://www.rfc-editor.org/rfc/rfc7643#section-4.1). A user cooresponds to the identity resource in Beyond Identity.\n").optional(),
+  }).describe("A user represents a human entity as defined by [RFC 7643 Section 4.1](https://www.rfc-editor.org/rfc/rfc7643#section-4.1). A user cooresponds to the identity resource in Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -3438,7 +3438,7 @@ export function registerV1Tools(
     "meta": z.object({
     "resourceType": z.string().describe("The name of the resource type of the resource."),
   }).describe("Resource metadata as defined in [RFC 7643 Section 3.1](https://www.rfc-editor.org/rfc/rfc7643#section-3.1). This attribute is only populated on responses and is ignored on requests.\n").optional(),
-  }).describe("A user represents a human entity as defined by [RFC 7643 Section 4.1](https://www.rfc-editor.org/rfc/rfc7643#section-4.1). A user cooresponds to the identity resource in Beyond Identity.\n").optional(),
+  }).describe("A user represents a human entity as defined by [RFC 7643 Section 4.1](https://www.rfc-editor.org/rfc/rfc7643#section-4.1). A user cooresponds to the identity resource in Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -3479,7 +3479,7 @@ export function registerV1Tools(
     "meta": z.object({
     "resourceType": z.string().describe("The name of the resource type of the resource."),
   }).describe("Resource metadata as defined in [RFC 7643 Section 3.1](https://www.rfc-editor.org/rfc/rfc7643#section-3.1). This attribute is only populated on responses and is ignored on requests.\n").optional(),
-  }).describe("A group is a collection of users corresponding to [RFC 7643 Section 4.2](https://www.rfc-editor.org/rfc/rfc7643#section-4.2).\n").optional(),
+  }).describe("A group is a collection of users corresponding to [RFC 7643 Section 4.2](https://www.rfc-editor.org/rfc/rfc7643#section-4.2).\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -3542,7 +3542,7 @@ export function registerV1Tools(
     "meta": z.object({
     "resourceType": z.string().describe("The name of the resource type of the resource."),
   }).describe("Resource metadata as defined in [RFC 7643 Section 3.1](https://www.rfc-editor.org/rfc/rfc7643#section-3.1). This attribute is only populated on responses and is ignored on requests.\n").optional(),
-  }).describe("A user represents a human entity as defined by [RFC 7643 Section 4.1](https://www.rfc-editor.org/rfc/rfc7643#section-4.1). A user cooresponds to the identity resource in Beyond Identity.\n").optional(),
+  }).describe("A user represents a human entity as defined by [RFC 7643 Section 4.1](https://www.rfc-editor.org/rfc/rfc7643#section-4.1). A user cooresponds to the identity resource in Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -3754,7 +3754,7 @@ export function registerV1Tools(
   })).describe("This structure describes additional attributes that can be attached to SAML assertion.\n"),
     "use_short_url": z.boolean().describe("Changes the EntityID in the SAML response to a shorter version. This is to support applications with URL restrictions.").optional(),
   })]).optional(),
-  }).describe("An application represents a client application that uses Beyond Identity for authentication. This could be a native app, a single-page application, regular web application, or machine-to-machine appli").optional(),
+  }).describe("An application represents a client application that uses Beyond Identity for authentication. This could be a native app, a single-page application, regular web application, or machine-to-machine appli"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -3826,7 +3826,7 @@ export function registerV1Tools(
     "allowed_user_ids": z.array(z.string()).describe("If allowed_user_ids is not nil and not empty, roaming auth will only be offered to specified users. Note that the user is determined _before_ authentication using a best effort lookup by login_hint, i").optional(),
   }).describe("The roaming_auth_config offers advanced configuration options for the roaming auth feature.").optional(),
   }).describe("Configuration options for the platform authenticator.")]).optional(),
-  }).describe("Representation of an authenticator configuration. This prescribes how an identity may authenticate themselves with Beyond Identity.\n").optional(),
+  }).describe("Representation of an authenticator configuration. This prescribes how an identity may authenticate themselves with Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -4329,7 +4329,7 @@ export function registerV1Tools(
       "group": z.object({
     "display_name": z.string().describe("A human-readable name for the group. This name is used for display purposes.\n").optional(),
     "description": z.string().describe("A free-form text field to describe a group.\n").optional(),
-  }).describe("A group is a logical collection of identities. Groups are commonly used as a predicate in a policy rule.\n").optional(),
+  }).describe("A group is a logical collection of identities. Groups are commonly used as a predicate in a policy rule.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -4403,7 +4403,7 @@ export function registerV1Tools(
     "manager_id": z.string().describe("The unique identifier for the user's manager.\n").optional(),
     "manager_name": z.string().describe("The name of the user's manager.\n").optional(),
   }).describe("Set of traits associated with an identity.").optional(),
-  }).describe("An identity is a unique identifier that may be used by an end-user to gain access governed by Beyond Identity.\n").optional(),
+  }).describe("An identity is a unique identifier that may be used by an end-user to gain access governed by Beyond Identity.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -4478,7 +4478,7 @@ export function registerV1Tools(
       "realm": z.object({
     "display_name": z.string().describe("A human-readable name for the realm. This name is used for display purposes.\n").optional(),
     "classification": z.string().describe("Classification of the realm. Can be either SECURE_WORFORCE or SECURE_CUSTOMER").optional(),
-  }).describe("A realm is a unique administrative domain within a tenant. Realms may be used to define multiple development environments or for isolated administrative domains.\n").optional(),
+  }).describe("A realm is a unique administrative domain within a tenant. Realms may be used to define multiple development environments or for isolated administrative domains.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -4517,7 +4517,7 @@ export function registerV1Tools(
     "display_name": z.string().describe("A human-readable name for the resource server. This name is used for display purposes.\n").optional(),
     "identifier": z.string().describe("The identifier of this resource server entity. This value should be unique per realm and is often presented as a URI, as it should be a unique identifier for an API to which access is being gated. Thi").optional(),
     "scopes": z.array(z.string()).describe("The list of scopes supported by this resource server. For the Beyond Identity Management API, this will include scopes for all publicly available endpoints.  Note that applications may not provide acc").optional(),
-  }).describe("A resource server represents an API server that hosts a set of protected resources and is capable of accepting and responding to protected resource requests using access tokens. Clients can enable the").optional(),
+  }).describe("A resource server represents an API server that hosts a set of protected resources and is capable of accepting and responding to protected resource requests using access tokens. Clients can enable the"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -4556,7 +4556,7 @@ export function registerV1Tools(
       "role": z.object({
     "display_name": z.string().describe("A human-readable name for the role. This name is used for display purposes.\n").optional(),
     "description": z.string().describe("A free-form text field to describe a role.\n").optional(),
-  }).describe("A role is a logical collection of scopes. Roles are commonly used to limit\naccess control.\n\nThe scopes belonging to a role are limited to its associated resource server.\nHowever, note that the resourc").optional(),
+  }).describe("A role is a logical collection of scopes. Roles are commonly used to limit\naccess control.\n\nThe scopes belonging to a role are limited to its associated resource server.\nHowever, note that the resourc"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -4738,7 +4738,7 @@ export function registerV1Tools(
       inputSchema: {
       "tenant": z.object({
     "display_name": z.string().describe("A human-readable name for the tenant. This name is used for display purposes.\n").optional(),
-  }).describe("A tenant represents an organization in the Beyond Identity Cloud. Tenants contain all data necessary for that organization to operate.\n").optional(),
+  }).describe("A tenant represents an organization in the Beyond Identity Cloud. Tenants contain all data necessary for that organization to operate.\n"),
       },
     },
     async (params: Record<string, unknown>) => {

@@ -114,9 +114,12 @@ export async function startTestServer(opts: {
     captures,
     zodSchemas,
     shutdown: async () => {
+      // Restore fetch FIRST so a partially-failed close() can't leak the stub
+      // to subsequent tests in this file. close() is pure transport teardown
+      // and never issues a fetch, so the reorder is semantically safe.
+      globalThis.fetch = originalFetch;
       await client.close();
       await server.close();
-      globalThis.fetch = originalFetch;
     },
   };
 }
