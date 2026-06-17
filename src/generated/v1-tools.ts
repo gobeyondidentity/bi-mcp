@@ -2061,41 +2061,6 @@ export function registerV1Tools(
   );
 
   server.registerTool(
-    "identity_to_sso_config_check",
-    {
-      description: "Check whether a specific identity is assigned to a specific SSO config. Requires both identity_id and sso_config_id. Returns a boolean result.",
-      inputSchema: {
-      "realm_id": z.string().describe("A unique identifier for a realm."),
-      "sso_config_id": z.string().describe("A unique identifier of the sso configuration"),
-      "identity_id": z.string().describe("The identity id"),
-      },
-      annotations: { readOnlyHint: true },
-    },
-    async (params: Record<string, unknown>) => {
-      try {
-        const result = await apiClient.request(
-          "GET",
-          "/v1/tenants/{tenant_id}/realms/{realm_id}/identities/{identity_id}/sso-configs/{sso_config_id}/is-identity-assigned", {
-        pathParams: { realm_id: params["realm_id"] as string, sso_config_id: params["sso_config_id"] as string, identity_id: params["identity_id"] as string },
-      },
-        );
-        return {
-          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } catch (error: unknown) {
-        const message =
-          error instanceof ApiError
-            ? `API Error (${error.statusCode}): ${error.code} - ${error.message}`
-            : `Unexpected error: ${String(error)}`;
-        return {
-          content: [{ type: "text" as const, text: message }],
-          isError: true,
-        };
-      }
-    },
-  );
-
-  server.registerTool(
     "list_applications",
     {
       description: "List all applications in a realm. Returns application objects including protocol_config (OIDC/OAuth2/SAML), resource_server_id, and authenticator_config_id. Pagination: page_size max 100, default 100. Includes both user-created and system-managed applications.",
@@ -3558,41 +3523,6 @@ export function registerV1Tools(
           "/v1/tenants/{tenant_id}/realms/{realm_id}/identities/{identity_id}/credential-binding-jobs/{credential_binding_job_id}:revoke", {
         pathParams: { realm_id: params["realm_id"] as string, identity_id: params["identity_id"] as string, credential_binding_job_id: params["credential_binding_job_id"] as string },
         body: params.body,
-      },
-        );
-        return {
-          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
-        };
-      } catch (error: unknown) {
-        const message =
-          error instanceof ApiError
-            ? `API Error (${error.statusCode}): ${error.code} - ${error.message}`
-            : `Unexpected error: ${String(error)}`;
-        return {
-          content: [{ type: "text" as const, text: message }],
-          isError: true,
-        };
-      }
-    },
-  );
-
-  server.registerTool(
-    "sso_is_group_assigned",
-    {
-      description: "Check whether specific groups are associated with an SSO config. Provide sso_config_id and group_ids to check.",
-      inputSchema: {
-      "realm_id": z.string().describe("A unique identifier for a realm."),
-      "sso_config_id": z.string().describe("A unique identifier of the sso configuration"),
-      "group_ids": z.array(z.string()).describe("A group id.").optional(),
-      },
-    },
-    async (params: Record<string, unknown>) => {
-      try {
-        const result = await apiClient.request(
-          "POST",
-          "/v1/tenants/{tenant_id}/realms/{realm_id}/sso-configs/{sso_config_id}/is-group-assigned", {
-        pathParams: { realm_id: params["realm_id"] as string, sso_config_id: params["sso_config_id"] as string },
-        body: { "group_ids": params["group_ids"] },
       },
         );
         return {

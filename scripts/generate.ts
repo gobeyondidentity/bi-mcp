@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import $RefParser from "@apidevtools/json-schema-ref-parser";
 import { sanitizeKey } from "../src/keys.js";
+import { EXCLUDED_TOOLS } from "./excluded-tools.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
@@ -577,6 +578,28 @@ function generateRegistryFile(
   ].join("\n");
 }
 
+// ── Exclusions ──────────────────────────────────────────────────────────────
+
+// Drop tools listed in scripts/excluded-tools.ts. Throws if an entry doesn't
+// match any extracted tool — that's the signal the spec changed (operation
+// renamed, removed) and the entry should be deleted or updated.
+function filterExcluded(tools: ToolDef[], platform: "v1" | "v0"): ToolDef[] {
+  const excluded = EXCLUDED_TOOLS[platform];
+  if (excluded.size === 0) return tools;
+  const names = new Set(tools.map((t) => t.name));
+  for (const name of excluded) {
+    if (!names.has(name)) {
+      throw new Error(
+        `EXCLUDED_TOOLS lists "${name}" for ${platform} but no tool with that name was extracted from the spec. Remove the stale exclusion or update its name.`,
+      );
+    }
+  }
+  const filtered = tools.filter((t) => !excluded.has(t.name));
+  const dropped = tools.length - filtered.length;
+  console.log(`  (excluded ${dropped} ${platform} tool${dropped === 1 ? "" : "s"}: ${[...excluded].join(", ")})`);
+  return filtered;
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -591,12 +614,12 @@ async function main() {
   const v0Spec = (await $RefParser.dereference(v0Parsed)) as unknown as OpenApiSpec;
 
   console.log("Extracting v1 tools...");
-  const v1Tools = extractTools(v1Spec, "v1");
-  console.log(`  Found ${v1Tools.length} v1 tools`);
+  const v1Tools = filterExcluded(extractTools(v1Spec, "v1"), "v1");
+  console.log(`  Found ${v1Tools.length} v1 tools (after exclusions)`);
 
   console.log("Extracting v0 tools...");
-  const v0Tools = extractTools(v0Spec, "v0");
-  console.log(`  Found ${v0Tools.length} v0 tools`);
+  const v0Tools = filterExcluded(extractTools(v0Spec, "v0"), "v0");
+  console.log(`  Found ${v0Tools.length} v0 tools (after exclusions)`);
 
   // Apply hand-written description overrides
   console.log("Applying description overrides...");

@@ -5,7 +5,10 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ApiClient } from "../src/client.js";
 import { registerV1Tools } from "../src/generated/v1-tools.js";
 import { registerV0Tools } from "../src/generated/v0-tools.js";
+import { V1_TOOL_REGISTRY } from "../src/generated/v1-registry.js";
+import { V0_TOOL_REGISTRY } from "../src/generated/v0-registry.js";
 import { KEY_PATTERN } from "../src/keys.js";
+import { EXCLUDED_TOOLS } from "../scripts/excluded-tools.js";
 
 interface CapturedTool {
   name: string;
@@ -48,6 +51,28 @@ test("v0 register-fn emits at least 30 tools", () => {
     v0Tools.length >= 30,
     `expected ≥30 v0 tools, got ${v0Tools.length}`,
   );
+});
+
+test("excluded tools are not registered and not present in the search registry", () => {
+  // Two-layer guard: if either layer regresses (e.g. someone regenerates
+  // without the filter, or the exclude list is bypassed for the registry),
+  // agents would see a known-broken tool and waste turns calling it.
+  for (const platform of ["v1", "v0"] as const) {
+    const excluded = EXCLUDED_TOOLS[platform];
+    if (excluded.size === 0) continue;
+    const tools = platform === "v1" ? v1Tools : v0Tools;
+    const registry = platform === "v1" ? V1_TOOL_REGISTRY : V0_TOOL_REGISTRY;
+    for (const name of excluded) {
+      assert.ok(
+        !tools.find((t) => t.name === name),
+        `${platform}: excluded tool "${name}" should NOT be registered on the MCP server`,
+      );
+      assert.ok(
+        !registry.find((t) => t.name === name),
+        `${platform}: excluded tool "${name}" should NOT appear in the search registry`,
+      );
+    }
+  }
 });
 
 test("every v1 tool name passes KEY_PATTERN", () => {
