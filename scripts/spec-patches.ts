@@ -222,6 +222,68 @@ export const SPEC_PATCHES: SpecPatch[] = [
       ], "#/components/schemas/SCIMUser");
     },
   },
+
+  {
+    // v1 SCIMUpdateUser (PATCH) — spec types the body as {user: SCIMUser} but
+    // a SCIM PATCH body should be a PatchOp ({schemas, Operations}). Double
+    // bug: wrong wrapper AND wrong schema. There's no PatchOp ref in the spec
+    // to point at, so substitute an inline shape.
+    description: "v1 SCIMUpdateUser: replace {user: SCIMUser} wrapper with inline PatchOp schema",
+    spec: "v1",
+    alreadyApplied(doc) {
+      const props = getMap(doc, [
+        "paths",
+        "/v1/tenants/{tenant_id}/realms/{realm_id}/scim/v2/Users/{user_id}",
+        "patch",
+        "requestBody",
+        "content",
+        "application/json",
+        "schema",
+        "properties",
+      ]);
+      return Boolean(props?.has("Operations"));
+    },
+    apply(doc) {
+      replaceWithInlinePatchOp(doc, [
+        "paths",
+        "/v1/tenants/{tenant_id}/realms/{realm_id}/scim/v2/Users/{user_id}",
+        "patch",
+        "requestBody",
+        "content",
+        "application/json",
+        "schema",
+      ]);
+    },
+  },
+
+  {
+    description: "v1 SCIMUpdateGroup: replace {group: SCIMGroup} wrapper with inline PatchOp schema",
+    spec: "v1",
+    alreadyApplied(doc) {
+      const props = getMap(doc, [
+        "paths",
+        "/v1/tenants/{tenant_id}/realms/{realm_id}/scim/v2/Groups/{group_id}",
+        "patch",
+        "requestBody",
+        "content",
+        "application/json",
+        "schema",
+        "properties",
+      ]);
+      return Boolean(props?.has("Operations"));
+    },
+    apply(doc) {
+      replaceWithInlinePatchOp(doc, [
+        "paths",
+        "/v1/tenants/{tenant_id}/realms/{realm_id}/scim/v2/Groups/{group_id}",
+        "patch",
+        "requestBody",
+        "content",
+        "application/json",
+        "schema",
+      ]);
+    },
+  },
 ];
 
 // Mutate a YAMLMap schema node in place: clear its existing wrapper-object
@@ -247,4 +309,44 @@ function replaceWithRef(
   }
   for (const key of SCHEMA_WRAPPER_KEYS) schema.delete(key);
   schema.set("$ref", refTarget);
+}
+
+// Mutate a YAMLMap schema node in place to be an inline SCIM PatchOp body
+// per RFC 7644 §3.5.2: { schemas: string[], Operations: [{op, path?, value?}] }.
+// Used for endpoints whose spec wrongly types the body as the resource itself
+// (SCIMUser/SCIMGroup) when the server actually wants a PatchOp.
+function replaceWithInlinePatchOp(
+  doc: Document,
+  schemaPath: ReadonlyArray<string>,
+): void {
+  const schema = doc.getIn(schemaPath as Array<unknown>, true);
+  if (!isMap(schema)) {
+    throw new Error(`schema at path ${schemaPath.join("/")} is not a YAMLMap`);
+  }
+  for (const key of SCHEMA_WRAPPER_KEYS) schema.delete(key);
+  schema.delete("$ref");
+  // Use createNode to convert nested JS objects into proper YAML tree nodes —
+  // otherwise the alreadyApplied check can't traverse `properties` because it
+  // remains a plain JS object until serialization.
+  schema.set("type", "object");
+  schema.set(
+    "properties",
+    doc.createNode({
+      schemas: { type: "array", items: { type: "string" } },
+      Operations: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            op: { type: "string", enum: ["add", "remove", "replace"] },
+            path: { type: "string" },
+            // SCIM leaves `value` open — depends on `path`. Permissive any.
+            value: {},
+          },
+          required: ["op"],
+        },
+      },
+    }),
+  );
+  schema.set("required", doc.createNode(["schemas", "Operations"]));
 }

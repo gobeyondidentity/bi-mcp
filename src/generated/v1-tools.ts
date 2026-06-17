@@ -3467,13 +3467,12 @@ export function registerV1Tools(
       inputSchema: {
       "group_id": z.string().describe("ID of the group."),
       "realm_id": z.string().describe("The realm id"),
-      "group": z.object({
-    "schemas": z.array(z.string()).describe("The list of schemas used to define the group. This must contain the core Group schema (\"urn:ietf:params:scim:schemas:core:2.0:Group\") and may include the custom Beyond Identity Group schema extension "),
-    "displayName": z.string().describe("The unique display name of the group. This name is used for display purposes.\n").optional(),
-    "meta": z.object({
-    "resourceType": z.string().describe("The name of the resource type of the resource."),
-  }).describe("Resource metadata as defined in [RFC 7643 Section 3.1](https://www.rfc-editor.org/rfc/rfc7643#section-3.1). This attribute is only populated on responses and is ignored on requests.\n").optional(),
-  }).describe("A group is a collection of users corresponding to [RFC 7643 Section 4.2](https://www.rfc-editor.org/rfc/rfc7643#section-4.2).\n"),
+      "schemas": z.array(z.string()),
+      "Operations": z.array(z.object({
+    "op": z.enum(["add", "remove", "replace"]),
+    "path": z.string().optional(),
+    "value": z.any().optional(),
+  })),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -3482,7 +3481,7 @@ export function registerV1Tools(
           "PATCH",
           "/v1/tenants/{tenant_id}/realms/{realm_id}/scim/v2/Groups/{group_id}", {
         pathParams: { group_id: params["group_id"] as string, realm_id: params["realm_id"] as string },
-        body: { "group": params["group"] },
+        body: { "schemas": params["schemas"], "Operations": params["Operations"] },
       },
         );
         return {
@@ -3508,35 +3507,12 @@ export function registerV1Tools(
       inputSchema: {
       "user_id": z.string().describe("ID of the user. This corresponds to the identity ID."),
       "realm_id": z.string().describe("The realm id"),
-      "user": z.object({
-    "schemas": z.array(z.string()).describe("The list of schemas used to define the user. This must contain only the core User schema (\"urn:ietf:params:scim:schemas:core:2.0:User\").\n"),
-    "externalId": z.string().describe("The provisioning client's unique identifier for the resource.").optional(),
-    "userName": z.string().describe("The unique username of the user.\n").optional(),
-    "displayName": z.string().describe("Display name of the User. This name is used for display purposes.\n").optional(),
-    "active": z.boolean().describe("Indicator for the user's administrative status. If true, the user has administrative capabilities.\n").optional(),
-    "emails": z.array(z.object({
-    "primary": z.boolean().describe("Indicator for the primary or preferred email address.\n\nOnly the primary email address is included on the response. All\nother provided email addresses will be ignored.\n").optional(),
-    "value": z.string().describe("The email address.").optional(),
-  }).describe("Definition of an email.")).describe("The list containing the user's emails.").optional(),
-    "name": z.object({
-    "givenName": z.string().describe("The given name of the user, or first name in most Western languages.\n").optional(),
-    "familyName": z.string().describe("The family name of the user, or last name in most Western languages.\n").optional(),
-  }).describe("Definition of the user's name.").optional(),
-    "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": z.object({
-    "employeeNumber": z.string().describe("A string identifier, typically numeric or alphanumeric, assigned to a person, typically based on order of hire or association with an organization as defined in [RFC 7643](https://datatracker.ietf.org").optional(),
-    "costCenter": z.string().describe("Identifies the name of a cost center as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
-    "organization": z.string().describe("Identifies the name of an organization as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
-    "department": z.string().describe("Identifies the name of a department as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
-    "division": z.string().describe("Identifies the name of a division as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
-    "manager": z.object({
-    "value": z.string().describe("The \"id\" of the SCIM resource representing the user's manager as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
-    "displayName": z.string().describe("The displayName of the user's manager. This attribute is OPTIONAL, and mutability is \"readOnly\" as defined in [RFC 7643](https://datatracker.ietf.org/doc/html/rfc7643#section-4.3).\n").optional(),
-  }).optional(),
-  }).describe("Defines attributes commonly used in representing users that belong to, or act on behalf of, a business or enterprise. The enterprise User extension is identified using the following schema URI: \"urn:i").optional(),
-    "meta": z.object({
-    "resourceType": z.string().describe("The name of the resource type of the resource."),
-  }).describe("Resource metadata as defined in [RFC 7643 Section 3.1](https://www.rfc-editor.org/rfc/rfc7643#section-3.1). This attribute is only populated on responses and is ignored on requests.\n").optional(),
-  }).describe("A user represents a human entity as defined by [RFC 7643 Section 4.1](https://www.rfc-editor.org/rfc/rfc7643#section-4.1). A user cooresponds to the identity resource in Beyond Identity.\n"),
+      "schemas": z.array(z.string()),
+      "Operations": z.array(z.object({
+    "op": z.enum(["add", "remove", "replace"]),
+    "path": z.string().optional(),
+    "value": z.any().optional(),
+  })),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -3545,7 +3521,7 @@ export function registerV1Tools(
           "PATCH",
           "/v1/tenants/{tenant_id}/realms/{realm_id}/scim/v2/Users/{user_id}", {
         pathParams: { user_id: params["user_id"] as string, realm_id: params["realm_id"] as string },
-        body: applyRemap({ "user": params["user"] }, {"urn_ietf_params_scim_schemas_extension_enterprise_2.0_User":"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"}),
+        body: { "schemas": params["schemas"], "Operations": params["Operations"] },
       },
         );
         return {

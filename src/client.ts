@@ -1,6 +1,33 @@
 import { ApiError } from "./types.js";
 import type { Config, Platform } from "./types.js";
 
+// When DEBUG_HTTP=1, log every outgoing HTTP request + incoming response to
+// stderr. Useful for the exercise script's --debug-http mode and for ad-hoc
+// debugging. No-op in normal operation. Authorization header is never logged.
+const DEBUG_HTTP = process.env.DEBUG_HTTP === "1";
+const DEBUG_BODY_PREVIEW_CHARS = 5000;
+
+function logRequest(method: string, url: string, body: string | undefined): void {
+  process.stderr.write(`[http] → ${method} ${url}\n`);
+  if (body) {
+    process.stderr.write(
+      `[http]   body: ${body.slice(0, DEBUG_BODY_PREVIEW_CHARS)}${body.length > DEBUG_BODY_PREVIEW_CHARS ? " …(truncated)" : ""}\n`,
+    );
+  }
+}
+
+function logResponse(status: number, body: unknown): void {
+  process.stderr.write(`[http] ← ${status}\n`);
+  const preview = typeof body === "string"
+    ? body
+    : JSON.stringify(body);
+  if (preview && preview.length > 0) {
+    process.stderr.write(
+      `[http]   body: ${preview.slice(0, DEBUG_BODY_PREVIEW_CHARS)}${preview.length > DEBUG_BODY_PREVIEW_CHARS ? " …(truncated)" : ""}\n`,
+    );
+  }
+}
+
 export class ApiClient {
   private baseUrl: string;
   private token: string;
@@ -58,6 +85,10 @@ export class ApiClient {
       fetchOptions.body = JSON.stringify(options.body);
     }
 
+    if (DEBUG_HTTP) {
+      logRequest(method, url.toString(), fetchOptions.body as string | undefined);
+    }
+
     const response = await fetch(url.toString(), fetchOptions);
 
     let responseBody: unknown;
@@ -70,6 +101,10 @@ export class ApiClient {
       responseBody = await response.json();
     } else {
       responseBody = await response.text();
+    }
+
+    if (DEBUG_HTTP) {
+      logResponse(response.status, responseBody);
     }
 
     if (!response.ok) {

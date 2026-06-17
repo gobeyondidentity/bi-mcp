@@ -6883,14 +6883,31 @@ paths:
         content:
           application/json:
             schema:
-              title: Update User Request
-              description: Request for UpdateUser.
               type: object
               properties:
-                user:
-                  $ref: '#/components/schemas/SCIMUser'
+                schemas:
+                  type: array
+                  items:
+                    type: string
+                Operations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      op:
+                        type: string
+                        enum:
+                          - add
+                          - remove
+                          - replace
+                      path:
+                        type: string
+                      value: {}
+                    required:
+                      - op
               required:
-                - user
+                - schemas
+                - Operations
             examples:
               Update Display Name:
                 value:
@@ -7523,14 +7540,31 @@ paths:
         content:
           application/json:
             schema:
-              title: Update Group Request
-              description: Request for UpdateGroup.
               type: object
               properties:
-                group:
-                  $ref: '#/components/schemas/SCIMGroup'
+                schemas:
+                  type: array
+                  items:
+                    type: string
+                Operations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      op:
+                        type: string
+                        enum:
+                          - add
+                          - remove
+                          - replace
+                      path:
+                        type: string
+                      value: {}
+                    required:
+                      - op
               required:
-                - group
+                - schemas
+                - Operations
             examples:
               Replace DisplayName:
                 value:
