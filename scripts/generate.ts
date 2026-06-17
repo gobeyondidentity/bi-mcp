@@ -248,7 +248,10 @@ function extractTools(
   const autoInjectedParams =
     platform === "v1" ? new Set(["tenant_id"]) : new Set<string>();
 
-  for (const [pathTemplate, pathItem] of Object.entries(paths)) {
+  for (const [rawPath, pathItem] of Object.entries(paths)) {
+    // Strip trailing slashes — some specs have inconsistent slashes
+    // (e.g. /scim/v2/Users vs /scim/v2/Groups/) that 404 on the server.
+    const pathTemplate = rawPath.replace(/\/+$/, "") || "/";
     // Collect path-level parameters (shared by all methods on this path)
     const pathLevelParams = (pathItem as Record<string, unknown>).parameters as ParameterObject[] | undefined;
 

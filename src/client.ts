@@ -62,7 +62,11 @@ export class ApiClient {
 
     let responseBody: unknown;
     const contentType = response.headers.get("content-type") ?? "";
-    if (contentType.includes("application/json")) {
+    // Accept application/json and any RFC 6839 structured-syntax JSON suffix
+    // (e.g. application/scim+json, application/problem+json). Without this,
+    // SCIM responses fall through to text() and downstream handlers double-
+    // encode them when they JSON.stringify the "result".
+    if (/^application\/(?:[^;]+\+)?json(?:;|$)/i.test(contentType)) {
       responseBody = await response.json();
     } else {
       responseBody = await response.text();

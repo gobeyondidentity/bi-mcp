@@ -2471,7 +2471,7 @@ paths:
               description: Request for CreateRole.
               type: object
               properties:
-                group:
+                role:
                   $ref: '#/components/schemas/Role'
               required:
                 - role
@@ -4389,7 +4389,8 @@ paths:
                 Too Many Requests:
                   value:
                     code: too_many_requests
-                    message: 'Maximum queue sized reached. Maximum: 1000 Current Total: 800 Overage: 100'
+                    message: 'Maximum queue sized reached. Maximum: 1000 Current Total: 800 Overage:
+                      100'
         '500':
           description: Server error.
           content:
@@ -6482,14 +6483,7 @@ paths:
         content:
           application/json:
             schema:
-              title: Create User Request
-              description: Request for CreateUser.
-              type: object
-              properties:
-                user:
-                  $ref: '#/components/schemas/SCIMUser'
-              required:
-                - user
+              $ref: "#/components/schemas/SCIMUser"
             examples:
               Create User:
                 value:
@@ -6517,7 +6511,8 @@ paths:
                 Success:
                   value:
                     schemas:
-                      - 'urn:ietf:params:scim:schemas:core:2.0:User urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'
+                      - 'urn:ietf:params:scim:schemas:core:2.0:User
+                        urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'
                     id: 2819c223-7f76-453a-919d-413861904646
                     externalId: bjensen
                     userName: bjensen
@@ -6575,7 +6570,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -6671,7 +6667,8 @@ paths:
                       - 'urn:ietf:params:scim:api:messages:2.0:ListResponse'
                     Resources:
                       - schemas:
-                          - 'urn:ietf:params:scim:schemas:core:2.0:User urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'
+                          - 'urn:ietf:params:scim:schemas:core:2.0:User
+                            urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'
                         id: 2819c223-7f76-453a-919d-413861904646
                         externalId: bjensen
                         userName: bjensen
@@ -6712,7 +6709,8 @@ paths:
                       - 'urn:ietf:params:scim:api:messages:2.0:Error'
                     status: '400'
                     scimType: invalidValue
-                    detail: 'A required value was missing, or the value specified was not compatible with the operation or attribute type, or resource schema.'
+                    detail: 'A required value was missing, or the value specified was not compatible
+                      with the operation or attribute type, or resource schema.'
         '401':
           description: Unauthorized.
           content:
@@ -6747,7 +6745,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -6837,7 +6836,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -6953,7 +6953,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -6990,14 +6991,7 @@ paths:
         content:
           application/json:
             schema:
-              title: Update User Request
-              description: Request for UpdateUser.
-              type: object
-              properties:
-                user:
-                  $ref: '#/components/schemas/SCIMUser'
-              required:
-                - user
+              $ref: "#/components/schemas/SCIMUser"
             examples:
               Replace User:
                 value:
@@ -7066,7 +7060,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -7143,7 +7138,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -7179,14 +7175,7 @@ paths:
         content:
           application/json:
             schema:
-              title: Create Group Request
-              description: Request for CreateGroup.
-              type: object
-              properties:
-                group:
-                  $ref: '#/components/schemas/SCIMGroup'
-              required:
-                - group
+              $ref: "#/components/schemas/SCIMGroup"
             examples:
               Create Group:
                 value:
@@ -7248,7 +7237,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -7391,7 +7381,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -7475,7 +7466,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -7620,7 +7612,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -7698,7 +7691,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -7806,7 +7800,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -8053,7 +8048,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -8124,7 +8120,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -8182,11 +8179,14 @@ paths:
                   - payload
                 properties:
                   id:
-                    description: A unique identifier for an SSO config. This is automatically generated on creation. This field is immutable and read-only. This field is unique within the realm.
+                    description: A unique identifier for an SSO config. This is automatically
+                      generated on creation. This field is immutable and
+                      read-only. This field is unique within the realm.
                     type: string
                     format: uuid
                   display_name:
-                    description: A human-readable name for the SSO config. This name is used for display purposes.
+                    description: A human-readable name for the SSO config. This name is used for
+                      display purposes.
                     type: string
                   payload:
                     oneOf:
@@ -8373,10 +8373,12 @@ paths:
                             $ref: '#/components/schemas/SsoConfigType'
                           acs_url:
                             type: string
-                            description: The Assertion Consumer Service (ACS) URL where the SAML assertions are sent.
+                            description: The Assertion Consumer Service (ACS) URL where the SAML assertions
+                              are sent.
                           override_recipient_and_destination:
                             type: boolean
-                            description: Flag to override the recipient and destination URLs in the SAML response.
+                            description: Flag to override the recipient and destination URLs in the SAML
+                              response.
                           recipient_url:
                             type: string
                             description: The recipient URL for the SAML response.
@@ -8385,7 +8387,8 @@ paths:
                             description: The destination URL for the SAML response.
                           audience_url:
                             type: string
-                            description: The URL that identifies the intended audience for the SAML assertion.
+                            description: The URL that identifies the intended audience for the SAML
+                              assertion.
                           default_relay_state:
                             type: string
                             description: The default relay state parameter for the SAML response.
@@ -8397,7 +8400,8 @@ paths:
                             description: The authentication context for the SAML assertion.
                           subject_user_name_attribute:
                             $ref: '#/components/schemas/SsoConfigPayload/oneOf/4/properties/subject_user_name_attribute'
-                            description: The attribute used for the subject's username in the SAML assertion.
+                            description: The attribute used for the subject's username in the SAML
+                              assertion.
                           sign_envelope:
                             type: boolean
                             description: Flag indicating whether to sign the SAML envelope.
@@ -8422,7 +8426,8 @@ paths:
                             description: The algorithm used for encrypting the SAML assertions.
                           assertion_key_transport_algorithm:
                             $ref: '#/components/schemas/SsoConfigPayload/oneOf/4/properties/assertion_key_transport_algorithm'
-                            description: The algorithm used for key transport when encrypting SAML assertions.
+                            description: The algorithm used for key transport when encrypting SAML
+                              assertions.
                           assertion_encryption_public_key:
                             type: string
                             description: The public key used for encrypting the SAML assertions.
@@ -8433,7 +8438,8 @@ paths:
                             description: The certificates used for signing the SAML assertions.
                           enable_single_log_out:
                             type: boolean
-                            description: Flag indicating whether to enable single logout (SLO) functionality.
+                            description: Flag indicating whether to enable single logout (SLO)
+                              functionality.
                           single_log_out_url:
                             type: string
                             description: The URL for single logout (SLO).
@@ -8445,7 +8451,8 @@ paths:
                             description: The binding method for single logout (SLO) requests.
                           single_logout_sign_request_and_response:
                             type: boolean
-                            description: Flag indicating whether to sign the single logout (SLO) requests and responses.
+                            description: Flag indicating whether to sign the single logout (SLO) requests
+                              and responses.
                           validate_signed_requests:
                             type: boolean
                             description: Flag indicating whether to validate signed SAML requests.
@@ -8483,13 +8490,19 @@ paths:
                           use_short_url:
                             default: false
                             type: boolean
-                            description: Changes the EntityID in the SAML response to a shorter version. This is to support applications with URL restrictions.
+                            description: Changes the EntityID in the SAML response to a shorter version.
+                              This is to support applications with URL
+                              restrictions.
                           short_sp_initiated_url:
                             type: string
-                            description: This is the shortened URL that will be used to initiate a SAML login from the service provider side. Generated and provided by Beyond Identity. This should only be displayed when `use_short_urls` is true.
+                            description: This is the shortened URL that will be used to initiate a SAML
+                              login from the service provider side. Generated
+                              and provided by Beyond Identity. This should only
+                              be displayed when `use_short_urls` is true.
                           short_entity_id_url:
                             type: string
-                            description: This is the shortened URL that we will use as our issuer inside of a SAML response.
+                            description: This is the shortened URL that we will use as our issuer inside of
+                              a SAML response.
                       - type: object
                         required:
                           - type
@@ -8703,7 +8716,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -8761,7 +8775,9 @@ paths:
         - name: type
           in: query
           required: false
-          description: The type of sso config to filter by. You may query with multiple types for example "/sso-configs?type=generic_oidc&type=generic_oid_idp"
+          description: The type of sso config to filter by. You may query with multiple
+            types for example
+            "/sso-configs?type=generic_oidc&type=generic_oid_idp"
           schema:
             type: array
             items:
@@ -8803,11 +8819,14 @@ paths:
                         - payload
                       properties:
                         id:
-                          description: A unique identifier for an SSO config. This is automatically generated on creation. This field is immutable and read-only. This field is unique within the realm.
+                          description: A unique identifier for an SSO config. This is automatically
+                            generated on creation. This field is immutable and
+                            read-only. This field is unique within the realm.
                           type: string
                           format: uuid
                         display_name:
-                          description: A human-readable name for the SSO config. This name is used for display purposes.
+                          description: A human-readable name for the SSO config. This name is used for
+                            display purposes.
                           type: string
                         payload:
                           oneOf:
@@ -8915,12 +8934,15 @@ paths:
                     format: uint
                     minimum: 0
                   next_page_token:
-                    description: The value to be passed as the page_token parameter to retrieve the next page.
+                    description: The value to be passed as the page_token parameter to retrieve the
+                      next page.
                     type: string
                     nullable: true
           headers:
             x-correlation-id:
-              description: 'Correlation ID. If supplied with the request, the response must contain the same value. If not supplied with the request, it is generated by the server and returned in the response.'
+              description: 'Correlation ID. If supplied with the request, the response must
+                contain the same value. If not supplied with the request, it is
+                generated by the server and returned in the response.'
               required: true
               schema:
                 type: string
@@ -8943,7 +8965,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9005,7 +9028,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9080,7 +9104,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9142,7 +9167,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9221,7 +9247,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9318,7 +9345,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9408,7 +9436,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9470,7 +9499,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9517,7 +9547,8 @@ paths:
             application/json:
               schema:
                 title: List Identities directly and indirectly associated with an SSO config.
-                description: List Identities Directly and Indirectly Associated With an SSO Config.
+                description: List Identities Directly and Indirectly Associated With an SSO
+                  Config.
                 type: object
                 properties:
                   identities:
@@ -9527,10 +9558,12 @@ paths:
                         - $ref: '#/components/schemas/Identity'
                         - properties:
                             group_id:
-                              description: 'If the association is through a group, the group ID will be added to the response object.'
+                              description: 'If the association is through a group, the group ID will be added
+                                to the response object.'
                               type: string
                             group_display_name:
-                              description: 'If the association is through a group, the group display name will be added to the response object.'
+                              description: 'If the association is through a group, the group display name will
+                                be added to the response object.'
                               type: string
                     maxItems: 200
                     description: An unordered array of identities corresponding to the request.
@@ -9560,7 +9593,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9582,7 +9616,8 @@ paths:
       tags:
         - Launch Mechanisms
       summary: Get flow type configuration
-      description: Retrieves the flow type configuration for a tenant or creates a default configuration if one does not exist
+      description: Retrieves the flow type configuration for a tenant or creates a
+        default configuration if one does not exist
       operationId: GetFlowTypeConfig
       security:
         - DirectoryAuth:
@@ -9644,7 +9679,8 @@ paths:
       tags:
         - Launch Mechanisms
       summary: Update flow type configuration
-      description: 'Updates the flow type configuration for a tenant, note that this will also create a default configuration if one does not exist'
+      description: 'Updates the flow type configuration for a tenant, note that this
+        will also create a default configuration if one does not exist'
       operationId: UpdateFlowTypeConfig
       security:
         - DirectoryAuth:
@@ -9780,7 +9816,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9855,7 +9892,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9936,7 +9974,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -9982,7 +10021,8 @@ paths:
             application/json:
               schema:
                 title: List SSO configs directly and indirectly associated with an identity.
-                description: List SSO configs directly and indirectly associated with an identity.
+                description: List SSO configs directly and indirectly associated with an
+                  identity.
                 type: object
                 properties:
                   sso_configs:
@@ -10021,7 +10061,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -10040,8 +10081,10 @@ paths:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
   '/v1/tenants/{tenant_id}/realms/{realm_id}/sso-configs/{sso_config_id}/is-group-assigned':
     post:
-      summary: Check if any of the groups provided are associated with the SSO Config ID.
-      description: Check if any of the groups provided are associated with the SSO Config ID.
+      summary: Check if any of the groups provided are associated with the SSO Config
+        ID.
+      description: Check if any of the groups provided are associated with the SSO
+        Config ID.
       tags:
         - SSO Configs
       operationId: SSOIsGroupAssigned
@@ -10102,7 +10145,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -10163,7 +10207,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -10346,7 +10391,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -10411,7 +10457,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -10507,7 +10554,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -10570,7 +10618,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -10633,7 +10682,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -10686,7 +10736,8 @@ paths:
             x-correlation-id:
               $ref: '#/paths/~1v1~1tenants~1%7Btenant_id%7D~1realms~1%7Brealm_id%7D~1sso-configs/get/responses/200/headers/x-correlation-id'
         '403':
-          description: The supplied authorization token doesn't allow the requested operation.
+          description: The supplied authorization token doesn't allow the requested
+            operation.
           content:
             application/json:
               schema:
@@ -10849,14 +10900,16 @@ components:
     token_id:
       name: token_id
       in: path
-      description: 'A unique identifier for a token. For JWS tokens, this corresponds to the value of the `jti` token claim.'
+      description: 'A unique identifier for a token. For JWS tokens, this corresponds
+        to the value of the `jti` token claim.'
       required: true
       schema:
         type: string
     principal_id:
       name: principal_id
       in: query
-      description: A unique identifier for a principal. This might be an application ID or an identity ID depending on the type of principal.
+      description: A unique identifier for a principal. This might be an application
+        ID or an identity ID depending on the type of principal.
       required: false
       schema:
         type: string
@@ -10950,7 +11003,9 @@ components:
         default: 1
     correlation_id:
       name: x-correlation_id
-      description: 'Correlation ID. If supplied with the request, the response must contain the same value. If not supplied with the request, it is generated by the server and returned in the response.'
+      description: 'Correlation ID. If supplied with the request, the response must
+        contain the same value. If not supplied with the request, it is
+        generated by the server and returned in the response.'
       in: header
       required: true
       schema:
@@ -11018,7 +11073,8 @@ components:
           example: Test Realm
         classification:
           type: string
-          description: Classification of the realm. Can be either SECURE_WORFORCE or SECURE_CUSTOMER
+          description: Classification of the realm. Can be either SECURE_WORFORCE or
+            SECURE_CUSTOMER
           example: SECURE_CUSTOMER
         create_time:
           type: string
@@ -11180,7 +11236,8 @@ components:
           minLength: 1
           maxLength: 64
           pattern: '^[^{}[\]<>;:?\\/|*^%$#=~`!]*$'
-          description: 'A required, unique, case-insensitive username for an identity in the realm.'
+          description: 'A required, unique, case-insensitive username for an identity in
+            the realm.'
           example: test
         primary_email_address:
           type: string
@@ -12418,11 +12475,14 @@ components:
                               enum:
                                 - idp
                             idp_id:
-                              description: The id of the IDP to use to verify the identity during the onboarding process.
+                              description: The id of the IDP to use to verify the identity during the
+                                onboarding process.
                               type: string
                               format: uuid
                         - title: Console Verification Method None
-                          description: An onboarding configuration with no verification configured. Identities will not be verified during the onboarding operation.
+                          description: An onboarding configuration with no verification configured.
+                            Identities will not be verified during the
+                            onboarding operation.
                           type: object
                           required:
                             - type
@@ -12445,13 +12505,18 @@ components:
                   enum:
                     - platform
                 trusted_origins:
-                  description: 'Trusted origins are URLs that will be allowed to make requests from a browser to the Beyond Identity API. This is used with Cross-Origin Resource Sharing (CORS). These may be in the form of `<scheme> "://" <host> [ ":" <port> ],` such as `https://auth.your-domain.com` or `http://localhost:3000`.'
+                  description: 'Trusted origins are URLs that will be allowed to make requests
+                    from a browser to the Beyond Identity API. This is used with
+                    Cross-Origin Resource Sharing (CORS). These may be in the
+                    form of `<scheme> "://" <host> [ ":" <port> ],` such as
+                    `https://auth.your-domain.com` or `http://localhost:3000`.'
                   type: array
                   items:
                     type: string
                   nullable: true
                 roaming_auth_config:
-                  description: The roaming_auth_config offers advanced configuration options for the roaming auth feature.
+                  description: The roaming_auth_config offers advanced configuration options for
+                    the roaming auth feature.
                   title: RoamingAuthConfig
                   type: object
                   required:
@@ -12459,23 +12524,46 @@ components:
                     - allow_unknow_user
                   properties:
                     enabled:
-                      description: 'If false, roaming auth is never offered as an available flow during authentication on this Authenticator Config.'
+                      description: 'If false, roaming auth is never offered as an available flow
+                        during authentication on this Authenticator Config.'
                       type: boolean
                     allow_unknown_user:
-                      description: 'If a login_hint is not provided or the login_hint does not match for exactly one user in the directory, the user will be considered "unknown" and the value of allow_unknown_user will be used to determine whether or not to offer roaming auth.'
+                      description: 'If a login_hint is not provided or the login_hint does not match
+                        for exactly one user in the directory, the user will be
+                        considered "unknown" and the value of allow_unknown_user
+                        will be used to determine whether or not to offer
+                        roaming auth.'
                       type: boolean
                     allowed_source_ips:
-                      description: 'If allowed_source_ips is not null and not empty, roaming auth will only be offered to users who begin the authentication from a specified IP address or range.'
+                      description: 'If allowed_source_ips is not null and not empty, roaming auth will
+                        only be offered to users who begin the authentication
+                        from a specified IP address or range.'
                       type: array
                       items:
                         type: string
                     allowed_user_group_ids:
-                      description: 'If allowed_user_group_ids is not nil and not empty, roaming auth will only be offered to users if they are part of one of those user groups. Note that the user is determined _before_ authentication using a best effort lookup by login_hint, if provided. If a login_hint is not provided or the login_hint does not match for exactly one user in the directory, the user will be considered \"unknown\" and the value of allow_unknown_user will be used to determine whether or not to offer roaming auth.'
+                      description: 'If allowed_user_group_ids is not nil and not empty, roaming auth
+                        will only be offered to users if they are part of one of
+                        those user groups. Note that the user is determined
+                        _before_ authentication using a best effort lookup by
+                        login_hint, if provided. If a login_hint is not provided
+                        or the login_hint does not match for exactly one user in
+                        the directory, the user will be considered \"unknown\"
+                        and the value of allow_unknown_user will be used to
+                        determine whether or not to offer roaming auth.'
                       type: array
                       items:
                         type: string
                     allowed_user_ids:
-                      description: 'If allowed_user_ids is not nil and not empty, roaming auth will only be offered to specified users. Note that the user is determined _before_ authentication using a best effort lookup by login_hint, if provided. If a login_hint is not provided or the login_hint does not match for exactly one user in the directory, the user will be considered \"unknown\" and the value of allow_unknown_user will be used to determine whether or not to offer roaming auth.'
+                      description: 'If allowed_user_ids is not nil and not empty, roaming auth will
+                        only be offered to specified users. Note that the user
+                        is determined _before_ authentication using a best
+                        effort lookup by login_hint, if provided. If a
+                        login_hint is not provided or the login_hint does not
+                        match for exactly one user in the directory, the user
+                        will be considered \"unknown\" and the value of
+                        allow_unknown_user will be used to determine whether or
+                        not to offer roaming auth.'
                       type: array
                       items:
                         type: string
@@ -13875,7 +13963,8 @@ components:
             use_short_url:
               default: false
               type: boolean
-              description: Changes the EntityID in the SAML response to a shorter version. This is to support applications with URL restrictions.
+              description: Changes the EntityID in the SAML response to a shorter version.
+                This is to support applications with URL restrictions.
         - type: object
           required:
             - type
@@ -14149,7 +14238,8 @@ components:
         use_short_url:
           default: false
           type: boolean
-          description: Changes the EntityID in the SAML response to a shorter version. This is to support applications with URL restrictions.
+          description: Changes the EntityID in the SAML response to a shorter version.
+            This is to support applications with URL restrictions.
     SsoConfigType:
       description: |
         Describes the type of sso config.
@@ -14183,13 +14273,16 @@ components:
           type: integer
           format: int32
         digest_algorithm:
-          description: The algorithm used to create a digest inside of the token within the RSTR.
+          description: The algorithm used to create a digest inside of the token within
+            the RSTR.
           $ref: '#/components/schemas/SsoConfigPayload/oneOf/4/properties/digest_algorithm'
         signature_algorithm:
-          description: The algorithm used to create a signature inside of the token within the RSTR.
+          description: The algorithm used to create a signature inside of the token within
+            the RSTR.
           $ref: '#/components/schemas/SsoConfigPayload/oneOf/4/properties/signature_algorithm'
         name_format:
-          description: The format that should be used to identify the user that is logging into the system.
+          description: The format that should be used to identify the user that is logging
+            into the system.
           $ref: '#/components/schemas/SsoConfigPayload/oneOf/4/properties/name_format'
         subject_user_name_attribute:
           description: |
@@ -14244,13 +14337,16 @@ components:
           type: integer
           format: int32
         digest_algorithm:
-          description: The algorithm used to create a digest inside of the token within the RSTR.
+          description: The algorithm used to create a digest inside of the token within
+            the RSTR.
           $ref: '#/components/schemas/SsoConfigPayload/oneOf/4/properties/digest_algorithm'
         signature_algorithm:
-          description: The algorithm used to create a signature inside of the token within the RSTR.
+          description: The algorithm used to create a signature inside of the token within
+            the RSTR.
           $ref: '#/components/schemas/SsoConfigPayload/oneOf/4/properties/signature_algorithm'
         name_format:
-          description: The format that should be used to identify the user that is logging into the system.
+          description: The format that should be used to identify the user that is logging
+            into the system.
           $ref: '#/components/schemas/SsoConfigPayload/oneOf/4/properties/name_format'
         subject_user_name_attribute:
           description: |
@@ -14306,10 +14402,12 @@ components:
         - payload
       properties:
         is_migrated:
-          description: Indicates that the SSO Config was added by a script such as fast migrate
+          description: Indicates that the SSO Config was added by a script such as fast
+            migrate
           type: boolean
         display_name:
-          description: A human-readable name for the application. This name is used for display purposes.
+          description: A human-readable name for the application. This name is used for
+            display purposes.
           type: string
         payload:
           $ref: '#/components/schemas/SsoConfigPayload'
@@ -14551,7 +14649,8 @@ components:
           format: uint
           minimum: 0
         next_page_token:
-          description: The value to be passed as the page_token parameter to retrieve the next page.
+          description: The value to be passed as the page_token parameter to retrieve the
+            next page.
           type: string
           nullable: true
     IdentityProviderProtocolConfigOidcIdpResponse:

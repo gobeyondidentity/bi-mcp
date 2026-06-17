@@ -135,13 +135,18 @@ test("v0 scim_create_group uses the sanitized byndid-extension alias", () => {
   );
 });
 
-test("v1 SCIM user tools keep their wrapper structure (URN nested under `user`)", () => {
-  // Sanity check that the v1 platform wrapping is preserved post-fix.
-  for (const name of ["scim_create_user", "scim_replace_user", "scim_update_user"]) {
+test("v1 SCIM create/replace user tools are flat after spec patch (no `user` wrapper)", () => {
+  // The v1 spec wraps SCIMCreateUser and SCIMReplaceUser bodies in
+  // {user: SCIMUser}, but the server expects a flat SCIM Resource. The
+  // patcher in scripts/spec-patches.ts unwraps them; this test locks that in.
+  // scim_update_user is intentionally left unpatched (a deeper PatchOp schema
+  // bug — see KNOWN-FAILING comments in scripts/exercise/v1-scenarios.ts).
+  for (const name of ["scim_create_user", "scim_replace_user"]) {
     const tool = v1Tools.find((t) => t.name === name);
     assert.ok(tool, `${name} not registered on v1`);
     const keys = Object.keys(tool!.config.inputSchema ?? {});
-    assert.ok(keys.includes("user"), `${name} should have top-level \`user\` key`);
+    assert.ok(!keys.includes("user"), `${name} should NOT have a \`user\` wrapper`);
+    assert.ok(keys.includes("userName"), `${name} should expose flat SCIM fields like userName`);
   }
 });
 

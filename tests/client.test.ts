@@ -242,6 +242,49 @@ test("successful JSON response is returned as parsed JSON", async () => {
   }
 });
 
+test("application/scim+json response is parsed as JSON (not double-encoded as a string)", async () => {
+  // Real SCIM servers respond with `Content-Type: application/scim+json` per
+  // RFC 7644 §3.1. Without the RFC 6839 `+json` suffix match, the body falls
+  // through to text() and downstream MCP handlers double-encode it when they
+  // JSON.stringify the result.
+  const stub = installFetchStub(
+    new Response(JSON.stringify({ id: "u1", userName: "alice" }), {
+      status: 200,
+      headers: { "content-type": "application/scim+json; charset=utf-8" },
+    }),
+  );
+  try {
+    const client = new ApiClient(V1_CONFIG);
+    const result = await client.request("POST", "/scim/v2/Users");
+    assert.deepEqual(result, { id: "u1", userName: "alice" });
+  } finally {
+    stub.restore();
+  }
+});
+
+test("application/problem+json is also parsed as JSON", async () => {
+  // Another RFC 6839 suffix — used for problem details (RFC 7807).
+  const stub = installFetchStub(
+    new Response(JSON.stringify({ type: "about:blank", title: "Bad Request" }), {
+      status: 400,
+      headers: { "content-type": "application/problem+json" },
+    }),
+  );
+  try {
+    const client = new ApiClient(V1_CONFIG);
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+      (err: unknown) => {
+        assert.ok(err instanceof ApiError);
+        assert.equal(err.statusCode, 400);
+        return true;
+      },
+    );
+  } finally {
+    stub.restore();
+  }
+});
+
 test("4xx response throws ApiError with status, code, message", async () => {
   const stub = installFetchStub(
     new Response(

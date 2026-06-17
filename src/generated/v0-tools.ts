@@ -1022,28 +1022,26 @@ export function registerV0Tools(
       description: "Replace a SCIM user entirely (PUT semantics). All required fields must be provided — this is not a partial update. Uses ETag-based optimistic locking to prevent concurrent update conflicts.",
       inputSchema: {
       "user_id": z.string().describe("ID of the user."),
-      "user": z.object({
-    "schemas": z.array(z.string()).describe("The list of schemas used to define the user. This must contain only the core User schema (\"urn:ietf:params:scim:schemas:core:2.0:User\").\n"),
-    "externalId": z.string().describe("The provisioning client's unique identifier for the resource. This value must be unique across all users.\n").optional(),
-    "userName": z.string().describe("The unique username of the user. The value of this field will be returned as the subject of an OIDC ID Token.\n").optional(),
-    "displayName": z.string().describe("Display name of the User. This name is used for display purposes.\n").optional(),
-    "active": z.boolean().describe("Indicator for the user's administrative status. If true, the user has administrative capabilities.\n").optional(),
-    "emails": z.array(z.object({
+      "schemas": z.array(z.string()).describe("The list of schemas used to define the user. This must contain only the core User schema (\"urn:ietf:params:scim:schemas:core:2.0:User\").\n"),
+      "externalId": z.string().describe("The provisioning client's unique identifier for the resource. This value must be unique across all users.\n").optional(),
+      "userName": z.string().describe("The unique username of the user. The value of this field will be returned as the subject of an OIDC ID Token.\n").optional(),
+      "displayName": z.string().describe("Display name of the User. This name is used for display purposes.\n").optional(),
+      "active": z.boolean().describe("Indicator for the user's administrative status. If true, the user has administrative capabilities.\n").optional(),
+      "emails": z.array(z.object({
     "primary": z.boolean().describe("Indicator for the primary email address. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email ").optional(),
     "value": z.string().describe("The email address. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email addresses are provided").optional(),
     "type": z.enum(["work", "home", "other"]).describe("The type of email address. Valid values are \"work\", \"home\", and \"other\" as defined in [RFC 7643](https://www.rfc-editor.org/rfc/rfc7643).\nImportant notes about email handling: - Only one email address").optional(),
   }).describe("Email addresses for the user. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email addresses a")).describe("The list containing the user's emails. Important notes about email handling: - Only one email address is supported per user - The email must be marked as primary (primary: true) - If multiple email ad").optional(),
-    "name": z.object({
+      "name": z.object({
     "givenName": z.string().describe("The given name of the user, or first name in most Western languages.\n").optional(),
     "familyName": z.string().describe("The family name of the user, or last name in most Western languages.\n").optional(),
   }).describe("Definition of the user's name.").optional(),
-    "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": z.object({
+      "urn_ietf_params_scim_schemas_extension_enterprise_2.0_User": z.object({
     "employeeNumber": z.string().describe("A string identifier, typically numeric or alphanumeric, assigned to a person, typically based on order of hire or association with an organization as defined in [RFC 7643](https://datatracker.ietf.org").optional(),
   }).describe("The Employee Number as defined in the enterprise SCIM extension").optional(),
-    "meta": z.object({
+      "meta": z.object({
     "resourceType": z.string().describe("The name of the resource type of the resource."),
   }).describe("Resource metadata as defined in [RFC 7643 Section 3.1](https://www.rfc-editor.org/rfc/rfc7643#section-3.1). This attribute is only populated on responses and is ignored on requests.\n").optional(),
-  }).describe("A user represents a human entity as defined by\n[RFC 7643 Section 4.1](https://www.rfc-editor.org/rfc/rfc7643#section-4.1).\n\nThe externalId attribute must be unique across all users in the system.\n"),
       },
     },
     async (params: Record<string, unknown>) => {
@@ -1052,7 +1050,7 @@ export function registerV0Tools(
           "PUT",
           "/scim/v2/Users/{user_id}", {
         pathParams: { user_id: params["user_id"] as string },
-        body: applyRemap({ "user": params["user"] }, {"urn_ietf_params_scim_schemas_extension_enterprise_2.0_User":"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"}),
+        body: applyRemap({ "schemas": params["schemas"], "externalId": params["externalId"], "userName": params["userName"], "displayName": params["displayName"], "active": params["active"], "emails": params["emails"], "name": params["name"], "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": params["urn_ietf_params_scim_schemas_extension_enterprise_2.0_User"], "meta": params["meta"] }, {"urn_ietf_params_scim_schemas_extension_enterprise_2.0_User":"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"}),
       },
         );
         return {
