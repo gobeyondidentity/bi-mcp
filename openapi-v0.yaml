@@ -397,7 +397,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -545,7 +546,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -635,7 +637,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -758,7 +761,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -834,7 +838,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -1012,7 +1017,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -1123,7 +1129,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -1235,7 +1242,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -1356,7 +1364,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -1527,7 +1536,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -1614,7 +1624,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -1732,7 +1743,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -1802,7 +1814,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -1936,7 +1949,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -2849,7 +2863,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -2985,7 +3000,8 @@ paths:
                       - 'urn:ietf:params:scim:api:messages:2.0:Error'
                     status: '400'
                     scimType: invalidValue
-                    detail: 'A required value was missing, or the value specified was not compatible with the operation or attribute type, or resource schema.'
+                    detail: 'A required value was missing, or the value specified was not compatible
+                      with the operation or attribute type, or resource schema.'
         '401':
           description: Unauthorized.
           content:
@@ -3005,7 +3021,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -3087,7 +3104,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -3297,7 +3315,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -3336,14 +3355,7 @@ paths:
         content:
           application/json:
             schema:
-              title: Update User Request
-              description: Request for UpdateUser.
-              type: object
-              properties:
-                user:
-                  $ref: '#/components/schemas/SCIMUser'
-              required:
-                - user
+              $ref: "#/components/schemas/SCIMUser"
             examples:
               Replace User:
                 value:
@@ -3404,7 +3416,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -3482,7 +3495,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -3547,7 +3561,9 @@ paths:
                   example: Help Desk
                 members:
                   type: array
-                  description: 'The list of the group''s members. Please note that only users can be added as members. If a non-existing user is specified, the endpoint will return a 404 error.'
+                  description: 'The list of the group''s members. Please note that only users can
+                    be added as members. If a non-existing user is specified,
+                    the endpoint will return a 404 error.'
                   items:
                     type: object
                     description: |
@@ -3677,7 +3693,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -3827,7 +3844,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -3921,7 +3939,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -4123,7 +4142,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -4207,7 +4227,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -4315,7 +4336,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -4637,7 +4659,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:
@@ -4708,7 +4731,8 @@ paths:
             RateLimit-Limit:
               schema:
                 type: string
-                description: 'Request limit per time window (see https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
+                description: 'Request limit per time window (see
+                  https://www.ietf.org/archive/id/draft-polli-ratelimit-headers-02.html#section-toc.1-1.3.2.1.1).'
                 example: 1
             RateLimit-Remaining:
               schema:

@@ -52,6 +52,7 @@ That's it. The server extracts your tenant ID from the JWT and determines the co
 |----------|----------|---------|-------------|
 | `API_KEY` | Yes | — | Beyond Identity API key (JWT). Obtained from the admin console under Settings > API Access. |
 | `REGION` | No | `US` | `US` or `EU`. Determines the API base URL. |
+| `BASE_URL` | No | _(computed from platform + region)_ | Override the API host. Use for non-production environments (e.g. staging, local mock). When set, takes precedence over `REGION`. |
 
 ## How It Works
 
@@ -454,7 +455,11 @@ npm install --ignore-scripts
 curl -s https://developer.beyondidentity.com/api/v1/openapi.yaml -o openapi.yaml
 curl -s https://docs.beyondidentity.com/api/v0/openapi.yaml -o openapi-v0.yaml
 
-# Regenerate tool code from specs
+# Regenerate tool code from specs.
+# Internally runs scripts/patch-spec.ts first, which applies known local
+# workarounds for confirmed bugs in the upstream specs (e.g. SCIM body
+# wrapping, /scim/v2/Groups/ trailing slash). The patch list lives in
+# scripts/spec-patches.ts and is idempotent — re-running is safe.
 npm run generate
 
 # Type-check

@@ -3,6 +3,8 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import $RefParser from "@apidevtools/json-schema-ref-parser";
+import { sanitizeKey } from "../src/keys.js";
+import { EXCLUDED_TOOLS } from "./excluded-tools.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
@@ -71,7 +73,10 @@ interface ToolDef {
     schema: SchemaObject;
   }>;
   bodySchema: SchemaObject | null;
-  bodyContentType: string;
+  // Whether the OpenAPI requestBody.required flag is true — i.e. the body as a
+  // whole must be present. If false, every body field is emitted as optional
+  // regardless of its individual `required` membership.
+  bodyRequired: boolean;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -90,8 +95,56 @@ function escapeString(s: string): string {
 
 // ── JSON Schema → Zod code string ───────────────────────────────────────────
 
-function jsonSchemaToZod(schema: SchemaObject, depth: number = 0): string {
-  if (depth > 5) return "z.any()";
+// Walks a schema we're about to drop (because of depth bail-out) just to add
+// any non-conforming property keys to the remap as a defensive last-ditch net.
+// No Zod output, no schema effect — only remap is mutated.
+function harvestNonConformingKeys(
+  schema: SchemaObject,
+  remap: Map<string, string>,
+  depth: number = 0,
+): void {
+  if (depth > 20 || !schema || typeof schema !== "object") return;
+  if (schema.properties) {
+    for (const [key, propSchema] of Object.entries(schema.properties)) {
+      const safe = sanitizeKey(key);
+      if (safe !== key) recordRemap(remap, safe, key);
+      harvestNonConformingKeys(propSchema, remap, depth + 1);
+    }
+  }
+  if (schema.items) harvestNonConformingKeys(schema.items, remap, depth + 1);
+  for (const variants of [schema.oneOf, schema.anyOf, schema.allOf]) {
+    if (variants) {
+      for (const v of variants) harvestNonConformingKeys(v, remap, depth + 1);
+    }
+  }
+}
+
+// Records safeKey → originalKey in the remap, throwing if a different original
+// is already mapped to the same safeKey (sanitization collision).
+function recordRemap(
+  remap: Map<string, string>,
+  safeKey: string,
+  originalKey: string,
+): void {
+  const existing = remap.get(safeKey);
+  if (existing !== undefined && existing !== originalKey) {
+    throw new Error(
+      `Sanitization collision: both "${existing}" and "${originalKey}" reduce to "${safeKey}". ` +
+        `Disambiguate one of them or extend the sanitizer.`,
+    );
+  }
+  remap.set(safeKey, originalKey);
+}
+
+function jsonSchemaToZod(
+  schema: SchemaObject,
+  remap: Map<string, string>,
+  depth: number = 0,
+): string {
+  if (depth > 10) {
+    harvestNonConformingKeys(schema, remap, depth);
+    return "z.any()";
+  }
 
   // Handle allOf by merging
   if (schema.allOf && schema.allOf.length > 0) {
@@ -106,7 +159,7 @@ function jsonSchemaToZod(schema: SchemaObject, depth: number = 0): string {
       }
     }
     if (Object.keys(merged.properties ?? {}).length > 0) {
-      return jsonSchemaToZod(merged, depth);
+      return jsonSchemaToZod(merged, remap, depth);
     }
     return "z.any()";
   }
@@ -114,13 +167,13 @@ function jsonSchemaToZod(schema: SchemaObject, depth: number = 0): string {
   // Handle oneOf/anyOf
   if (schema.oneOf || schema.anyOf) {
     const variants = (schema.oneOf ?? schema.anyOf)!;
-    if (variants.length === 1) return jsonSchemaToZod(variants[0], depth + 1);
+    if (variants.length === 1) return jsonSchemaToZod(variants[0], remap, depth + 1);
     if (variants.length >= 2) {
-      const first = jsonSchemaToZod(variants[0], depth + 1);
-      const second = jsonSchemaToZod(variants[1], depth + 1);
+      const first = jsonSchemaToZod(variants[0], remap, depth + 1);
+      const second = jsonSchemaToZod(variants[1], remap, depth + 1);
       let result = `z.union([${first}, ${second}`;
       for (let i = 2; i < variants.length; i++) {
-        result += `, ${jsonSchemaToZod(variants[i], depth + 1)}`;
+        result += `, ${jsonSchemaToZod(variants[i], remap, depth + 1)}`;
       }
       result += "])";
       return result;
@@ -150,7 +203,7 @@ function jsonSchemaToZod(schema: SchemaObject, depth: number = 0): string {
       return `z.boolean()${desc}`;
     case "array": {
       const itemsZod = schema.items
-        ? jsonSchemaToZod(schema.items, depth + 1)
+        ? jsonSchemaToZod(schema.items, remap, depth + 1)
         : "z.any()";
       return `z.array(${itemsZod})${desc}`;
     }
@@ -165,10 +218,12 @@ function jsonSchemaToZod(schema: SchemaObject, depth: number = 0): string {
       const fields: string[] = [];
       for (const [key, propSchema] of Object.entries(schema.properties)) {
         if (propSchema.readOnly) continue;
-        const fieldZod = jsonSchemaToZod(propSchema, depth + 1);
+        const safeKey = sanitizeKey(key);
+        if (safeKey !== key) recordRemap(remap, safeKey, key);
+        const fieldZod = jsonSchemaToZod(propSchema, remap, depth + 1);
         const isRequired = requiredSet.has(key);
         fields.push(
-          `    ${JSON.stringify(key)}: ${fieldZod}${isRequired ? "" : ".optional()"}`,
+          `    ${JSON.stringify(safeKey)}: ${fieldZod}${isRequired ? "" : ".optional()"}`,
         );
       }
       if (fields.length === 0) return `z.record(z.any())${desc}`;
@@ -194,7 +249,10 @@ function extractTools(
   const autoInjectedParams =
     platform === "v1" ? new Set(["tenant_id"]) : new Set<string>();
 
-  for (const [pathTemplate, pathItem] of Object.entries(paths)) {
+  for (const [rawPath, pathItem] of Object.entries(paths)) {
+    // Strip trailing slashes — some specs have inconsistent slashes
+    // (e.g. /scim/v2/Users vs /scim/v2/Groups/) that 404 on the server.
+    const pathTemplate = rawPath.replace(/\/+$/, "") || "/";
     // Collect path-level parameters (shared by all methods on this path)
     const pathLevelParams = (pathItem as Record<string, unknown>).parameters as ParameterObject[] | undefined;
 
@@ -268,18 +326,15 @@ function extractTools(
 
       // Request body
       let bodySchema: SchemaObject | null = null;
-      let bodyContentType = "application/json";
       if (operation.requestBody?.content) {
-        for (const [ct, mediaType] of Object.entries(
-          operation.requestBody.content,
-        )) {
+        for (const mediaType of Object.values(operation.requestBody.content)) {
           if (mediaType.schema) {
             bodySchema = mediaType.schema;
-            bodyContentType = ct;
             break;
           }
         }
       }
+      const bodyRequired = operation.requestBody?.required === true;
 
       tools.push({
         name,
@@ -291,10 +346,14 @@ function extractTools(
         pathParams,
         queryParams,
         bodySchema,
-        bodyContentType,
+        bodyRequired,
       });
     }
   }
+
+  // Sort by tool name so generated-file diffs are stable across spec re-downloads
+  // that may shuffle path ordering.
+  tools.sort((a, b) => a.name.localeCompare(b.name));
 
   return tools;
 }
@@ -311,6 +370,7 @@ function generateToolsFile(
     'import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";',
     'import { ApiClient } from "../client.js";',
     'import { ApiError } from "../types.js";',
+    'import { applyRemap } from "../remap.js";',
     "",
     `export function register${platform === "v1" ? "V1" : "V0"}Tools(`,
     "  server: McpServer,",
@@ -319,25 +379,37 @@ function generateToolsFile(
   ];
 
   for (const tool of tools) {
+    try {
     const inputFields: string[] = [];
+    // Per-tool map of sanitized key → original key. Populated as we walk the
+    // body schema. Anything in here is renamed back to the original at
+    // request-time via applyRemap.
+    const remap = new Map<string, string>();
 
-    // Path params as required string fields
+    // Path params as required string fields. Names are sanitized — agents see
+    // the safe form; the handler maps back to the original at request time.
     for (const param of tool.pathParams) {
+      const safeName = sanitizeKey(param.name);
+      if (safeName !== param.name) recordRemap(remap, safeName, param.name);
       inputFields.push(
-        `      ${JSON.stringify(param.name)}: z.string().describe("${escapeString(param.description.slice(0, 200))}")`,
+        `      ${JSON.stringify(safeName)}: z.string().describe("${escapeString(param.description.slice(0, 200))}")`,
       );
     }
 
-    // Query params
+    // Query params (same sanitization treatment as path params)
     for (const qp of tool.queryParams) {
-      const zodType = jsonSchemaToZod(qp.schema, 0);
+      const safeName = sanitizeKey(qp.name);
+      if (safeName !== qp.name) recordRemap(remap, safeName, qp.name);
+      const zodType = jsonSchemaToZod(qp.schema, remap, 0);
       const opt = qp.required ? "" : ".optional()";
       inputFields.push(
-        `      ${JSON.stringify(qp.name)}: ${zodType}${opt}.describe("${escapeString(qp.description.slice(0, 200))}")`,
+        `      ${JSON.stringify(safeName)}: ${zodType}${opt}.describe("${escapeString(qp.description.slice(0, 200))}")`,
       );
     }
 
-    // Request body — flatten one level if it's an object with properties
+    // Request body — flatten one level if it's an object with properties.
+    // If the entire body is optional per OpenAPI, every field is .optional()
+    // regardless of its membership in the schema's `required` array.
     if (tool.bodySchema) {
       if (
         tool.bodySchema.type === "object" &&
@@ -349,14 +421,21 @@ function generateToolsFile(
           tool.bodySchema.properties,
         )) {
           if ((propSchema as SchemaObject).readOnly) continue;
-          const zodType = jsonSchemaToZod(propSchema as SchemaObject, 0);
+          const safeKey = sanitizeKey(key);
+          if (safeKey !== key) recordRemap(remap, safeKey, key);
+          const zodType = jsonSchemaToZod(propSchema as SchemaObject, remap, 0);
+          // Honor the field-level required[] regardless of requestBody.required.
+          // Per OpenAPI semantics, required[] applies when the body is sent;
+          // since MCP has no way to model "all-or-nothing on top-level args",
+          // we choose the stricter interpretation. Tools whose body really is
+          // optional-as-a-whole simply have an empty required[].
           const opt = requiredSet.has(key) ? "" : ".optional()";
-          inputFields.push(`      ${JSON.stringify(key)}: ${zodType}${opt}`);
+          inputFields.push(`      ${JSON.stringify(safeKey)}: ${zodType}${opt}`);
         }
       } else {
-        inputFields.push(
-          `      body: ${jsonSchemaToZod(tool.bodySchema, 0)}`,
-        );
+        const inner = jsonSchemaToZod(tool.bodySchema, remap, 0);
+        const opt = tool.bodyRequired ? "" : ".optional()";
+        inputFields.push(`      body: ${inner}${opt}`);
       }
     }
 
@@ -365,20 +444,25 @@ function generateToolsFile(
     if (tool.method === "GET") annotationParts.push("readOnlyHint: true");
     if (tool.method === "DELETE") annotationParts.push("destructiveHint: true");
 
-    // Build the path params mapping for the handler
+    // Build the path params mapping for the handler. Outgoing key is the
+    // ORIGINAL spec name (the path template's `{placeholder}`); we read from
+    // the SAFE name on the agent's params.
     const pathParamEntries = tool.pathParams
-      .map((p) => `${p.name}: params[${JSON.stringify(p.name)}] as string`)
+      .map(
+        (p) =>
+          `${p.name}: params[${JSON.stringify(sanitizeKey(p.name))}] as string`,
+      )
       .join(", ");
     const pathParamsObj =
       pathParamEntries.length > 0
         ? `pathParams: { ${pathParamEntries} }`
         : "";
 
-    // Build the query params mapping
+    // Build the query params mapping (same outgoing-vs-incoming key dance).
     const queryParamEntries = tool.queryParams
       .map(
         (qp) =>
-          `${JSON.stringify(qp.name)}: params[${JSON.stringify(qp.name)}] as string | number | boolean | undefined`,
+          `${JSON.stringify(qp.name)}: params[${JSON.stringify(sanitizeKey(qp.name))}] as string | number | boolean | undefined`,
       )
       .join(", ");
     const queryParamsObj =
@@ -386,7 +470,10 @@ function generateToolsFile(
         ? `queryParams: { ${queryParamEntries} }`
         : "";
 
-    // Build body — reconstruct the original body shape
+    // Build body — reconstruct the original body shape. Top-level keys are
+    // restored statically (outgoing JSON key = original key, value read from
+    // the sanitized key in params). Any nested renamed keys are restored at
+    // runtime via applyRemap below.
     let bodyExpr = "";
     if (tool.bodySchema) {
       if (
@@ -396,11 +483,15 @@ function generateToolsFile(
       ) {
         const bodyFields = Object.keys(tool.bodySchema.properties)
           .filter((k) => !(tool.bodySchema!.properties![k] as SchemaObject).readOnly)
-          .map((k) => `${JSON.stringify(k)}: params[${JSON.stringify(k)}]`)
+          .map((k) => `${JSON.stringify(k)}: params[${JSON.stringify(sanitizeKey(k))}]`)
           .join(", ");
         bodyExpr = `body: { ${bodyFields} }`;
       } else {
         bodyExpr = "body: params.body";
+      }
+      if (remap.size > 0) {
+        const remapObj = JSON.stringify(Object.fromEntries(remap));
+        bodyExpr = `body: applyRemap(${bodyExpr.slice("body: ".length)}, ${remapObj})`;
       }
     }
 
@@ -452,6 +543,11 @@ ${toolConfigParts.join(",\n")},
       }
     },
   );`);
+    } catch (err) {
+      throw new Error(
+        `While generating tool "${tool.name}" (${platform}): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   lines.push("}");
@@ -482,6 +578,28 @@ function generateRegistryFile(
   ].join("\n");
 }
 
+// ── Exclusions ──────────────────────────────────────────────────────────────
+
+// Drop tools listed in scripts/excluded-tools.ts. Throws if an entry doesn't
+// match any extracted tool — that's the signal the spec changed (operation
+// renamed, removed) and the entry should be deleted or updated.
+function filterExcluded(tools: ToolDef[], platform: "v1" | "v0"): ToolDef[] {
+  const excluded = EXCLUDED_TOOLS[platform];
+  if (excluded.size === 0) return tools;
+  const names = new Set(tools.map((t) => t.name));
+  for (const name of excluded) {
+    if (!names.has(name)) {
+      throw new Error(
+        `EXCLUDED_TOOLS lists "${name}" for ${platform} but no tool with that name was extracted from the spec. Remove the stale exclusion or update its name.`,
+      );
+    }
+  }
+  const filtered = tools.filter((t) => !excluded.has(t.name));
+  const dropped = tools.length - filtered.length;
+  console.log(`  (excluded ${dropped} ${platform} tool${dropped === 1 ? "" : "s"}: ${[...excluded].join(", ")})`);
+  return filtered;
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -496,12 +614,12 @@ async function main() {
   const v0Spec = (await $RefParser.dereference(v0Parsed)) as unknown as OpenApiSpec;
 
   console.log("Extracting v1 tools...");
-  const v1Tools = extractTools(v1Spec, "v1");
-  console.log(`  Found ${v1Tools.length} v1 tools`);
+  const v1Tools = filterExcluded(extractTools(v1Spec, "v1"), "v1");
+  console.log(`  Found ${v1Tools.length} v1 tools (after exclusions)`);
 
   console.log("Extracting v0 tools...");
-  const v0Tools = extractTools(v0Spec, "v0");
-  console.log(`  Found ${v0Tools.length} v0 tools`);
+  const v0Tools = filterExcluded(extractTools(v0Spec, "v0"), "v0");
+  console.log(`  Found ${v0Tools.length} v0 tools (after exclusions)`);
 
   // Apply hand-written description overrides
   console.log("Applying description overrides...");
