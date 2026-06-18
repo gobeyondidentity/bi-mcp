@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel in-progress runs for the same branch / PR so a quick succession of
+# pushes doesn't pile up. Latest commit wins.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  lint-and-typecheck:
+    name: Lint + typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  generate-drift:
+    name: Generated code is up to date
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    # If `npm run generate` produces any diff against committed code, this job
+    # fails — catches the case where someone hand-edited a generated file or
+    # forgot to commit a regen after touching spec-patches.ts / generate.ts.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run generate
+      - name: Verify no uncommitted regeneration drift
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Generated files are stale — run \`npm run generate\` locally and commit the result."
+            exit 1
+          fi

@@ -546,6 +546,7 @@ ${toolConfigParts.join(",\n")},
     } catch (err) {
       throw new Error(
         `While generating tool "${tool.name}" (${platform}): ${err instanceof Error ? err.message : String(err)}`,
+        { cause: err },
       );
     }
   }

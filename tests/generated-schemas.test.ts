@@ -218,3 +218,34 @@ test("destructive annotation set on DELETE tools (sampled)", () => {
   assert.ok(deleteRealm);
   assert.equal(deleteRealm!.config.annotations?.destructiveHint, true);
 });
+
+// ── Tenant isolation: no v1 tool may accept tenant_id as agent input ───────
+// The MCP server is provisioned with a single tenant's API key. The client
+// at src/client.ts overwrites {tenant_id} placeholders with the JWT-derived
+// tenantId before honoring caller-supplied pathParams. This test pins down
+// the *first* line of defense — the generator must never even expose
+// tenant_id to the agent, so a malicious or buggy tool call can't try to
+// spoof a different tenant in the first place.
+test("no v1 tool exposes `tenant_id` as an agent-visible input", () => {
+  const offenders = v1Tools.filter((t) =>
+    Object.keys(t.config.inputSchema ?? {}).includes("tenant_id"),
+  );
+  assert.deepEqual(
+    offenders.map((t) => t.name),
+    [],
+    "v1 tools must not surface tenant_id to the agent — generator filter regressed",
+  );
+});
+
+test("no v0 tool exposes `tenant_id` as an agent-visible input", () => {
+  // v0 paths don't contain {tenant_id} in the spec, but a defensive check
+  // catches a future upstream change that silently introduces one.
+  const offenders = v0Tools.filter((t) =>
+    Object.keys(t.config.inputSchema ?? {}).includes("tenant_id"),
+  );
+  assert.deepEqual(
+    offenders.map((t) => t.name),
+    [],
+    "v0 tools must not surface tenant_id to the agent",
+  );
+});

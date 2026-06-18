@@ -62,6 +62,48 @@ test("v1 client injects tenant_id into the path", async () => {
   }
 });
 
+test("v1 client ignores agent-supplied tenant_id in pathParams (cross-tenant guard)", async () => {
+  // The client overwrites {tenant_id} with the JWT-derived tenantId BEFORE
+  // honoring caller pathParams, so even if a tool somehow tried to inject
+  // a foreign tenant_id, the URL stays pinned to the real tenant.
+  const stub = installFetchStub(jsonResponse({}));
+  try {
+    const client = new ApiClient({ ...V1_CONFIG, tenantId: "real-tenant-A" });
+    await client.request("GET", "/v1/tenants/{tenant_id}/realms", {
+      pathParams: { tenant_id: "spoofed-tenant-B" },
+    });
+    assert.equal(
+      stub.calls[0].url,
+      "https://api.example.com/v1/tenants/real-tenant-A/realms",
+    );
+    assert.doesNotMatch(stub.calls[0].url, /spoofed-tenant-B/);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("v1 client surfaces agent-supplied tenant_id in queryParams as-is (server-side defense expected)", async () => {
+  // No BI v1 endpoint advertises tenant_id as a query param today, but if a
+  // future tool somehow passed one, the client would forward it. The server
+  // is the authority on tenant identity (it derives it from the bearer
+  // token, not query strings) — this test documents the contract: query
+  // params from agents arrive unmodified, and the server must enforce.
+  const stub = installFetchStub(jsonResponse({}));
+  try {
+    const client = new ApiClient({ ...V1_CONFIG, tenantId: "real-tenant-A" });
+    await client.request("GET", "/v1/tenants/{tenant_id}/realms", {
+      queryParams: { tenant_id: "spoofed-tenant-B" },
+    });
+    // Path is still pinned to the real tenant
+    assert.match(stub.calls[0].url, /\/v1\/tenants\/real-tenant-A\/realms/);
+    // Query param is forwarded — server must ignore / 403 / 404
+    const u = new URL(stub.calls[0].url);
+    assert.equal(u.searchParams.get("tenant_id"), "spoofed-tenant-B");
+  } finally {
+    stub.restore();
+  }
+});
+
 test("v1 client URL-encodes the injected tenant_id", async () => {
   // Tenant IDs from real JWTs are UUIDs (no special chars), but a defensive
   // encode-on-injection guarantees a malformed tenant claim can't escape its
@@ -331,14 +373,17 @@ test("5xx response throws ApiError with HTTP <status> fallback message", async (
 
 test("network-level fetch failure propagates as-is (NOT wrapped in ApiError)", async () => {
   // fetch can throw before any response arrives (DNS, refused connection, abort).
-  // The client doesn't catch these — they bubble up to the caller untouched.
+  // After retries are exhausted the original error bubbles up untouched —
+  // callers downstream rely on `err instanceof TypeError` to distinguish
+  // network errors from API errors. Disable retries here so the test stays
+  // fast; the "max retries exhausted" path is covered separately below.
   const original = globalThis.fetch;
   const networkErr = new TypeError("fetch failed: ECONNREFUSED");
   globalThis.fetch = (async () => {
     throw networkErr;
   }) as typeof fetch;
   try {
-    const client = new ApiClient(V1_CONFIG);
+    const client = new ApiClient(V1_CONFIG, { maxRetries: 0 });
     await assert.rejects(
       async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
       (err: unknown) => {
@@ -394,5 +439,374 @@ test("error response with `error` field falls back to that code", async () => {
     );
   } finally {
     stub.restore();
+  }
+});
+
+// ── Retry / timeout / User-Agent ───────────────────────────────────────────
+// All retry tests inject `sleep: () => Promise.resolve()` so backoff waits
+// don't slow the suite. They still assert the requested backoff *durations*
+// via a custom sleep capture where the timing matters (Retry-After).
+
+interface SequencedCall {
+  url: string;
+  init: RequestInit;
+}
+
+function installSequencedFetchStub(
+  responders: Array<(() => Response) | (() => Promise<Response>) | (() => never)>,
+): { calls: SequencedCall[]; restore: () => void } {
+  const calls: SequencedCall[] = [];
+  const original = globalThis.fetch;
+  let i = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: String(input), init: init ?? {} });
+    if (i >= responders.length) {
+      throw new Error(
+        `fetch stub exhausted: call #${i + 1} not configured (only ${responders.length} responders)`,
+      );
+    }
+    return await responders[i++]();
+  }) as typeof fetch;
+  return { calls, restore: () => { globalThis.fetch = original; } };
+}
+
+test("User-Agent header includes the package version", async () => {
+  const stub = installFetchStub(jsonResponse({}));
+  try {
+    const client = new ApiClient(V1_CONFIG);
+    await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    const headers = stub.calls[0].init.headers as Record<string, string>;
+    assert.match(headers["User-Agent"] ?? "", /^beyond-identity-mcp\/\d+\.\d+\.\d+/);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("custom userAgent option overrides the default", async () => {
+  const stub = installFetchStub(jsonResponse({}));
+  try {
+    const client = new ApiClient(V1_CONFIG, { userAgent: "test-agent/9.9.9" });
+    await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    const headers = stub.calls[0].init.headers as Record<string, string>;
+    assert.equal(headers["User-Agent"], "test-agent/9.9.9");
+  } finally {
+    stub.restore();
+  }
+});
+
+test("GET retries on 503 then succeeds", async () => {
+  const stub = installSequencedFetchStub([
+    () => new Response("svc unavail", { status: 503 }),
+    () => new Response("svc unavail", { status: 503 }),
+    () => jsonResponse({ ok: true }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      sleep: () => Promise.resolve(),
+    });
+    const result = await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    assert.deepEqual(result, { ok: true });
+    assert.equal(stub.calls.length, 3, "expected 2 retries + 1 success = 3 calls");
+  } finally {
+    stub.restore();
+  }
+});
+
+test("GET retries on network TypeError then succeeds", async () => {
+  let calls = 0;
+  const original = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    calls++;
+    if (calls < 3) throw new TypeError("fetch failed: ECONNRESET");
+    return jsonResponse({ ok: true });
+  }) as typeof fetch;
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      sleep: () => Promise.resolve(),
+    });
+    const result = await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    assert.deepEqual(result, { ok: true });
+    assert.equal(calls, 3);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("max retries exhausted on persistent 5xx — final ApiError bubbles up", async () => {
+  const stub = installSequencedFetchStub([
+    () => new Response("err", { status: 502 }),
+    () => new Response("err", { status: 502 }),
+    () => new Response("err", { status: 502 }),
+    () => new Response("err", { status: 502 }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      sleep: () => Promise.resolve(),
+    });
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+      (err: unknown) => {
+        assert.ok(err instanceof ApiError);
+        assert.equal(err.statusCode, 502);
+        return true;
+      },
+    );
+    // 1 initial + 3 retries = 4 attempts at default maxRetries=3
+    assert.equal(stub.calls.length, 4);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("POST stays one-shot on 503 (no retry) by default", async () => {
+  const stub = installSequencedFetchStub([
+    () => new Response("svc unavail", { status: 503 }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      sleep: () => Promise.resolve(),
+    });
+    await assert.rejects(
+      async () => client.request("POST", "/v1/tenants/{tenant_id}/realms", {
+        body: { display_name: "x" },
+      }),
+      (err: unknown) => err instanceof ApiError && err.statusCode === 503,
+    );
+    assert.equal(stub.calls.length, 1, "POST must NOT retry by default");
+  } finally {
+    stub.restore();
+  }
+});
+
+test("POST retries when retryNonIdempotent=true", async () => {
+  const stub = installSequencedFetchStub([
+    () => new Response("err", { status: 503 }),
+    () => jsonResponse({ id: "ok" }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      sleep: () => Promise.resolve(),
+    });
+    const result = await client.request(
+      "POST",
+      "/v1/tenants/{tenant_id}/realms",
+      { body: { display_name: "x" }, retryNonIdempotent: true },
+    );
+    assert.deepEqual(result, { id: "ok" });
+    assert.equal(stub.calls.length, 2);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("501 Not Implemented is NOT retried (only 5xx-except-501 retry)", async () => {
+  const stub = installSequencedFetchStub([
+    () => new Response("not implemented", { status: 501 }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      sleep: () => Promise.resolve(),
+    });
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+      (err: unknown) => err instanceof ApiError && err.statusCode === 501,
+    );
+    assert.equal(stub.calls.length, 1, "501 must NOT retry");
+  } finally {
+    stub.restore();
+  }
+});
+
+test("4xx (other than 429) is NOT retried", async () => {
+  // 400/401/403/404 are all "your request is wrong" — retrying changes nothing.
+  for (const status of [400, 401, 403, 404]) {
+    const stub = installSequencedFetchStub([
+      () => new Response("err", { status }),
+    ]);
+    try {
+      const client = new ApiClient(V1_CONFIG, {
+        sleep: () => Promise.resolve(),
+      });
+      await assert.rejects(
+        async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+        (err: unknown) => err instanceof ApiError && err.statusCode === status,
+      );
+      assert.equal(stub.calls.length, 1, `status ${status} must NOT retry`);
+    } finally {
+      stub.restore();
+    }
+  }
+});
+
+test("429 with Retry-After: <seconds> waits the requested duration before retrying", async () => {
+  const sleeps: number[] = [];
+  const stub = installSequencedFetchStub([
+    () =>
+      new Response("rate limited", {
+        status: 429,
+        headers: { "retry-after": "2" },
+      }),
+    () => jsonResponse({ ok: true }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      sleep: (ms) => {
+        sleeps.push(ms);
+        return Promise.resolve();
+      },
+    });
+    const result = await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    assert.deepEqual(result, { ok: true });
+    assert.equal(sleeps.length, 1);
+    assert.equal(sleeps[0], 2000, "Retry-After: 2 → 2000ms sleep");
+  } finally {
+    stub.restore();
+  }
+});
+
+test("429 without Retry-After falls back to exponential backoff", async () => {
+  const sleeps: number[] = [];
+  const stub = installSequencedFetchStub([
+    () => new Response("rate limited", { status: 429 }),
+    () => jsonResponse({ ok: true }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      baseBackoffMs: 100,
+      jitterRatio: 0, // disable jitter so the value is deterministic
+      sleep: (ms) => { sleeps.push(ms); return Promise.resolve(); },
+    });
+    await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    assert.equal(sleeps.length, 1);
+    // First retry: 100 * 2^0 = 100ms (with zero jitter)
+    assert.equal(sleeps[0], 100);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("exponential backoff grows base * 2^attempt across retries (jitter off)", async () => {
+  const sleeps: number[] = [];
+  const stub = installSequencedFetchStub([
+    () => new Response("err", { status: 503 }),
+    () => new Response("err", { status: 503 }),
+    () => new Response("err", { status: 503 }),
+    () => jsonResponse({ ok: true }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      baseBackoffMs: 100,
+      jitterRatio: 0,
+      sleep: (ms) => { sleeps.push(ms); return Promise.resolve(); },
+    });
+    await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    assert.deepEqual(sleeps, [100, 200, 400]);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("timeout fires after configured ms when fetch hangs", async () => {
+  // Stub fetch that hangs until its abort signal fires, then throws the
+  // AbortError that runtime fetch would normally produce.
+  const original = globalThis.fetch;
+  globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) =>
+    new Promise((_resolve, reject) => {
+      const signal = init?.signal;
+      if (!signal) return; // never resolve — test will time out the harness
+      const onAbort = () => {
+        const err = new Error("aborted");
+        err.name = "AbortError";
+        reject(err);
+      };
+      if (signal.aborted) onAbort();
+      else signal.addEventListener("abort", onAbort);
+    })) as typeof fetch;
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      timeoutMs: 50,
+      maxRetries: 0,
+      sleep: () => Promise.resolve(),
+    });
+    const start = Date.now();
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.match(err.message, /timed out after 50ms/);
+        return true;
+      },
+    );
+    const elapsed = Date.now() - start;
+    assert.ok(elapsed >= 40, `expected ≥40ms, got ${elapsed}ms`);
+    assert.ok(elapsed < 1000, `expected timeout to fire fast, got ${elapsed}ms`);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("timeout error counts as retriable for idempotent methods", async () => {
+  // First call hangs (will be aborted). Second call succeeds.
+  let callIdx = 0;
+  const original = globalThis.fetch;
+  globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
+    callIdx++;
+    if (callIdx === 1) {
+      return new Promise((_resolve, reject) => {
+        const signal = init?.signal;
+        if (!signal) return;
+        signal.addEventListener("abort", () => {
+          const err = new Error("aborted");
+          err.name = "AbortError";
+          reject(err);
+        });
+      });
+    }
+    return Promise.resolve(jsonResponse({ ok: true }));
+  }) as typeof fetch;
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      timeoutMs: 30,
+      maxRetries: 2,
+      sleep: () => Promise.resolve(),
+    });
+    const result = await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    assert.deepEqual(result, { ok: true });
+    assert.equal(callIdx, 2);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("BI_HTTP_TIMEOUT_MS env var overrides default timeout", async () => {
+  const originalEnv = process.env.BI_HTTP_TIMEOUT_MS;
+  process.env.BI_HTTP_TIMEOUT_MS = "123";
+  try {
+    const original = globalThis.fetch;
+    globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        const signal = init?.signal;
+        signal?.addEventListener("abort", () => {
+          const err = new Error("aborted");
+          err.name = "AbortError";
+          reject(err);
+        });
+      })) as typeof fetch;
+    try {
+      const client = new ApiClient(V1_CONFIG, {
+        maxRetries: 0,
+        sleep: () => Promise.resolve(),
+      });
+      await assert.rejects(
+        async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+        (err: unknown) =>
+          err instanceof Error && /timed out after 123ms/.test(err.message),
+      );
+    } finally {
+      globalThis.fetch = original;
+    }
+  } finally {
+    if (originalEnv === undefined) delete process.env.BI_HTTP_TIMEOUT_MS;
+    else process.env.BI_HTTP_TIMEOUT_MS = originalEnv;
   }
 });
