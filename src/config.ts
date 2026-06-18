@@ -1,5 +1,11 @@
 import type { Config, Platform, Region } from "./types.js";
 
+// Allow modest clock skew between issuer and local host so a token with
+// sub-minute remaining lifetime doesn't fail startup with a confusing
+// "expired" message. The BI API is the authority on actual token validity;
+// this check exists only to catch clearly-stale tokens at boot.
+const JWT_EXPIRY_SKEW_MS = 60_000;
+
 const BASE_URLS: Record<Platform, Record<Region, string>> = {
   v1: {
     US: "https://api-us.beyondidentity.com",
@@ -80,7 +86,10 @@ export function loadConfig(): Config {
 
   // Fail fast on already-expired tokens — every API call would 401 otherwise,
   // with a confusing runtime error rather than a clear startup one.
-  if (typeof claims.exp === "number" && claims.exp * 1000 < Date.now()) {
+  if (
+    typeof claims.exp === "number" &&
+    claims.exp * 1000 + JWT_EXPIRY_SKEW_MS < Date.now()
+  ) {
     throw new Error(
       `API_KEY JWT expired on ${new Date(claims.exp * 1000).toISOString()}. Generate a fresh token from the admin console.`,
     );

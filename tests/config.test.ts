@@ -189,8 +189,10 @@ test("BASE_URL env var overrides the platform/region default", () => {
   );
 });
 
-test("expired JWT (past exp claim) throws with a clear message", () => {
-  const pastExp = Math.floor(Date.now() / 1000) - 60; // one minute ago
+test("expired JWT (past exp claim, beyond skew window) throws with a clear message", () => {
+  // 5 minutes ago — comfortably past the JWT_EXPIRY_SKEW_MS tolerance in
+  // src/config.ts. If the constant ever grows past 5 minutes, widen this.
+  const pastExp = Math.floor(Date.now() / 1000) - 300;
   withEnv(
     {
       API_KEY: makeJwt({ bi_t: "t", exp: pastExp }),
@@ -199,6 +201,23 @@ test("expired JWT (past exp claim) throws with a clear message", () => {
     },
     () => {
       assert.throws(() => loadConfig(), /API_KEY JWT expired on /);
+    },
+  );
+});
+
+test("JWT expiring within the skew window is accepted", () => {
+  // 30 seconds ago — inside the JWT_EXPIRY_SKEW_MS tolerance (60s) in
+  // src/config.ts, so startup must NOT throw. Lets the BI API be the
+  // authority on actual token validity instead of the local wall clock.
+  const recentExp = Math.floor(Date.now() / 1000) - 30;
+  withEnv(
+    {
+      API_KEY: makeJwt({ bi_t: "t", exp: recentExp }),
+      REGION: undefined,
+      BASE_URL: undefined,
+    },
+    () => {
+      assert.doesNotThrow(() => loadConfig());
     },
   );
 });
