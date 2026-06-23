@@ -24,6 +24,13 @@
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
+// The expected `core.hooksPath` value after `husky` (v9.x) finishes its
+// `prepare` step. Husky writes this to the LOCAL git config and stores
+// its hook stubs under `.husky/_/`. If husky ever changes its install
+// layout (major version bump), this constant must change too — otherwise
+// this check will fight husky every install. See husky's `prepare` impl:
+//   https://github.com/typicode/husky
+// Coupled to husky `~9.x`; package.json pins the major via `^9.0.0`.
 const EXPECTED = ".husky/_";
 
 function inGitCheckout() {
@@ -35,13 +42,18 @@ function inGitCheckout() {
   }
 }
 
-function readHooksPath() {
+function readLocalHooksPath() {
+  // `--local` restricts to repo-local config — we want to know what
+  // husky's prepare actually wrote, not whatever the user has in their
+  // global/system config. If a contributor has a global core.hooksPath
+  // set (some folks do), reading without --local would point the finger
+  // at husky inaccurately.
   try {
-    return execSync("git config --get core.hooksPath", {
+    return execSync("git config --local --get core.hooksPath", {
       encoding: "utf-8",
     }).trim();
   } catch {
-    // `git config --get` exits 1 when the key is unset.
+    // Exits 1 when the key isn't set locally.
     return "";
   }
 }
@@ -50,7 +62,7 @@ if (!inGitCheckout() || !existsSync(".husky")) {
   process.exit(0);
 }
 
-const current = readHooksPath();
+const current = readLocalHooksPath();
 
 if (current === EXPECTED) {
   process.exit(0);
