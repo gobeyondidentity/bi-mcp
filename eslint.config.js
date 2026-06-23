@@ -17,6 +17,15 @@ export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // Node-runtime JS scripts (.js files we ship & run via `node`) need
+    // the Node globals declared so `no-undef` doesn't trip on `process`.
+    // TS files don't need this — the tseslint parser handles them.
+    files: ["**/*.js"],
+    languageOptions: {
+      globals: { process: "readonly", Buffer: "readonly" },
+    },
+  },
+  {
     files: ["**/*.ts"],
     rules: {
       "@typescript-eslint/no-unused-vars": [

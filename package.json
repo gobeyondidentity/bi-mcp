@@ -31,7 +31,7 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit && tsc --project tsconfig.test.json --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "prepare": "husky",
+    "prepare": "husky && node scripts/check-hooks-path.js",
     "prepublishOnly": "npm run build && npm run lint && npm test"
   },
   "lint-staged": {
