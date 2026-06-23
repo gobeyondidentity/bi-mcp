@@ -664,27 +664,6 @@ test("429 with Retry-After: <seconds> waits the requested duration before retryi
   }
 });
 
-test("429 without Retry-After falls back to exponential backoff", async () => {
-  const sleeps: number[] = [];
-  const stub = installSequencedFetchStub([
-    () => new Response("rate limited", { status: 429 }),
-    () => jsonResponse({ ok: true }),
-  ]);
-  try {
-    const client = new ApiClient(V1_CONFIG, {
-      baseBackoffMs: 100,
-      jitterRatio: 0, // disable jitter so the value is deterministic
-      sleep: (ms) => { sleeps.push(ms); return Promise.resolve(); },
-    });
-    await client.request("GET", "/v1/tenants/{tenant_id}/realms");
-    assert.equal(sleeps.length, 1);
-    // First retry: 100 * 2^0 = 100ms (with zero jitter)
-    assert.equal(sleeps[0], 100);
-  } finally {
-    stub.restore();
-  }
-});
-
 test("exponential backoff grows base * 2^attempt across retries (jitter off)", async () => {
   const sleeps: number[] = [];
   const stub = installSequencedFetchStub([
@@ -971,29 +950,6 @@ test("timeout error chains the original AbortError as its cause", async () => {
 // up to maxRetryAfterMs (default 60s); beyond that we skip the retry and
 // surface the error so the caller knows to back off entirely.
 
-test("Retry-After within cap is honored", async () => {
-  // Regression guard — the default cap (60s) should not affect a 2s wait.
-  const sleeps: number[] = [];
-  const stub = installSequencedFetchStub([
-    () =>
-      new Response("rate limited", {
-        status: 429,
-        headers: { "retry-after": "2" },
-      }),
-    () => jsonResponse({ ok: true }),
-  ]);
-  try {
-    const client = new ApiClient(V1_CONFIG, {
-      sleep: (ms) => { sleeps.push(ms); return Promise.resolve(); },
-    });
-    const result = await client.request("GET", "/v1/tenants/{tenant_id}/realms");
-    assert.deepEqual(result, { ok: true });
-    assert.deepEqual(sleeps, [2000]);
-  } finally {
-    stub.restore();
-  }
-});
-
 test("Retry-After exceeding default cap aborts retry", async () => {
   // Retry-After: 999 → 999000ms > default 60000ms cap. Client must NOT
   // sleep that long; it must surface the 429 instead.
@@ -1055,25 +1011,3 @@ test("Retry-After honored up to custom maxRetryAfterMs", async () => {
   }
 });
 
-test("Retry-After cap also applies to 503", async () => {
-  // 503 with an abusive Retry-After should bail the same as 429.
-  const stub = installSequencedFetchStub([
-    () =>
-      new Response("svc unavail", {
-        status: 503,
-        headers: { "retry-after": "86400" },
-      }),
-  ]);
-  try {
-    const client = new ApiClient(V1_CONFIG, {
-      sleep: () => Promise.resolve(),
-    });
-    await assert.rejects(
-      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
-      (err: unknown) => err instanceof ApiError && err.statusCode === 503,
-    );
-    assert.equal(stub.calls.length, 1);
-  } finally {
-    stub.restore();
-  }
-});

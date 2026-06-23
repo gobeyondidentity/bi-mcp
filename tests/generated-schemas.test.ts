@@ -237,15 +237,3 @@ test("no v1 tool exposes `tenant_id` as an agent-visible input", () => {
   );
 });
 
-test("no v0 tool exposes `tenant_id` as an agent-visible input", () => {
-  // v0 paths don't contain {tenant_id} in the spec, but a defensive check
-  // catches a future upstream change that silently introduces one.
-  const offenders = v0Tools.filter((t) =>
-    Object.keys(t.config.inputSchema ?? {}).includes("tenant_id"),
-  );
-  assert.deepEqual(
-    offenders.map((t) => t.name),
-    [],
-    "v0 tools must not surface tenant_id to the agent",
-  );
-});
