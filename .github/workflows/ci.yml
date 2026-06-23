@@ -59,7 +59,13 @@ jobs:
       - run: npm run generate
       - name: Verify no uncommitted regeneration drift
         run: |
-          if ! git diff --exit-code; then
-            echo "::error::Generated files are stale — run \`npm run generate\` locally and commit the result."
+          # `git status --porcelain` catches modified, new, deleted, and
+          # renamed files — `git diff` would miss anything untracked. We
+          # scope to src/generated/ so unrelated working-tree churn (e.g.
+          # an escaped cache file) doesn't false-positive.
+          drift=$(git status --porcelain src/generated)
+          if [ -n "$drift" ]; then
+            echo "::error::Generated files are stale, new, or removed — run \`npm run generate\` locally and commit the result."
+            echo "$drift"
             exit 1
           fi

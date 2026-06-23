@@ -810,3 +810,224 @@ test("BI_HTTP_TIMEOUT_MS env var overrides default timeout", async () => {
     else process.env.BI_HTTP_TIMEOUT_MS = originalEnv;
   }
 });
+
+// ── End-to-end timeout coverage ────────────────────────────────────────────
+// The AbortController must stay live through body parsing. A server that
+// sends headers quickly but then trickles the body must still trip the
+// configured timeout — otherwise the docstring's "per-request timeout" lies.
+
+function buildHangingBodyResponse(signal: AbortSignal): Response {
+  // ReadableStream that never enqueues data and never closes. The fetch
+  // implementation surfaces the signal abort by erroring the stream, which
+  // surfaces as an AbortError when the caller awaits `.text()` / `.json()`.
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const onAbort = () => {
+        controller.error(
+          Object.assign(new Error("aborted"), { name: "AbortError" }),
+        );
+      };
+      if (signal.aborted) onAbort();
+      else signal.addEventListener("abort", onAbort);
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+test("timeout fires while parsing a slow-trickle body", async () => {
+  // fetch resolves fast (headers in), body never completes. The timeout
+  // must trip body parsing, not just the headers wait.
+  const original = globalThis.fetch;
+  globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
+    const signal = init?.signal;
+    if (!signal) throw new Error("test: signal missing");
+    return Promise.resolve(buildHangingBodyResponse(signal));
+  }) as typeof fetch;
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      timeoutMs: 50,
+      maxRetries: 0,
+      sleep: () => Promise.resolve(),
+    });
+    const start = Date.now();
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.match(err.message, /timed out after 50ms/);
+        return true;
+      },
+    );
+    const elapsed = Date.now() - start;
+    assert.ok(elapsed >= 40, `expected ≥40ms, got ${elapsed}ms`);
+    assert.ok(elapsed < 1000, `expected fast timeout, got ${elapsed}ms`);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("timeout fires during body drain before retry", async () => {
+  // 503 with a hanging body. We attempt to drain before retrying; the
+  // drain must be timed too, otherwise a stuck response body silently
+  // hangs the retry path.
+  const original = globalThis.fetch;
+  globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
+    const signal = init?.signal;
+    if (!signal) throw new Error("test: signal missing");
+    // Headers say 503; body never completes.
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const onAbort = () =>
+          controller.error(
+            Object.assign(new Error("aborted"), { name: "AbortError" }),
+          );
+        if (signal.aborted) onAbort();
+        else signal.addEventListener("abort", onAbort);
+      },
+    });
+    return Promise.resolve(
+      new Response(stream, {
+        status: 503,
+        headers: { "content-type": "text/plain" },
+      }),
+    );
+  }) as typeof fetch;
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      timeoutMs: 50,
+      maxRetries: 2,
+      sleep: () => Promise.resolve(),
+    });
+    const start = Date.now();
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+      (err: unknown) => {
+        // The abort during the drain bubbles up as the timeout error
+        // — caller sees a clean "timed out" rather than a hung process.
+        assert.ok(err instanceof Error);
+        assert.match(err.message, /timed out after 50ms/);
+        return true;
+      },
+    );
+    const elapsed = Date.now() - start;
+    // Should fail fast on the FIRST attempt's drain, not wait for all retries.
+    assert.ok(elapsed < 1000, `expected fast failure, got ${elapsed}ms`);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+// ── Retry-After cap ────────────────────────────────────────────────────────
+// A server can request an arbitrary wait via Retry-After. We honor it only
+// up to maxRetryAfterMs (default 60s); beyond that we skip the retry and
+// surface the error so the caller knows to back off entirely.
+
+test("Retry-After within cap is honored", async () => {
+  // Regression guard — the default cap (60s) should not affect a 2s wait.
+  const sleeps: number[] = [];
+  const stub = installSequencedFetchStub([
+    () =>
+      new Response("rate limited", {
+        status: 429,
+        headers: { "retry-after": "2" },
+      }),
+    () => jsonResponse({ ok: true }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      sleep: (ms) => { sleeps.push(ms); return Promise.resolve(); },
+    });
+    const result = await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    assert.deepEqual(result, { ok: true });
+    assert.deepEqual(sleeps, [2000]);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("Retry-After exceeding default cap aborts retry", async () => {
+  // Retry-After: 999 → 999000ms > default 60000ms cap. Client must NOT
+  // sleep that long; it must surface the 429 instead.
+  const sleeps: number[] = [];
+  const stub = installSequencedFetchStub([
+    () =>
+      new Response(
+        JSON.stringify({ code: "RATE_LIMITED", message: "slow down" }),
+        {
+          status: 429,
+          headers: {
+            "content-type": "application/json",
+            "retry-after": "999",
+          },
+        },
+      ),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      sleep: (ms) => { sleeps.push(ms); return Promise.resolve(); },
+    });
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+      (err: unknown) => {
+        assert.ok(err instanceof ApiError);
+        assert.equal(err.statusCode, 429);
+        return true;
+      },
+    );
+    assert.equal(stub.calls.length, 1, "must not retry when Retry-After exceeds cap");
+    assert.equal(sleeps.length, 0, "must not sleep when cap exceeded");
+  } finally {
+    stub.restore();
+  }
+});
+
+test("Retry-After honored up to custom maxRetryAfterMs", async () => {
+  // Bump the cap to 2_000_000ms (~33min). A 999s wait now fits and
+  // becomes a real sleep — locks the option in place.
+  const sleeps: number[] = [];
+  const stub = installSequencedFetchStub([
+    () =>
+      new Response("rate limited", {
+        status: 429,
+        headers: { "retry-after": "999" },
+      }),
+    () => jsonResponse({ ok: true }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      maxRetryAfterMs: 2_000_000,
+      sleep: (ms) => { sleeps.push(ms); return Promise.resolve(); },
+    });
+    const result = await client.request("GET", "/v1/tenants/{tenant_id}/realms");
+    assert.deepEqual(result, { ok: true });
+    assert.deepEqual(sleeps, [999_000]);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("Retry-After cap also applies to 503", async () => {
+  // 503 with an abusive Retry-After should bail the same as 429.
+  const stub = installSequencedFetchStub([
+    () =>
+      new Response("svc unavail", {
+        status: 503,
+        headers: { "retry-after": "86400" },
+      }),
+  ]);
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      sleep: () => Promise.resolve(),
+    });
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+      (err: unknown) => err instanceof ApiError && err.statusCode === 503,
+    );
+    assert.equal(stub.calls.length, 1);
+  } finally {
+    stub.restore();
+  }
+});
