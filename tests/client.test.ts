@@ -869,15 +869,18 @@ test("timeout fires while parsing a slow-trickle body", async () => {
   }
 });
 
-test("timeout fires during body drain before retry", async () => {
+test("timeout fires during body drain before retry — surfaces on FIRST attempt", async () => {
   // 503 with a hanging body. We attempt to drain before retrying; the
-  // drain must be timed too, otherwise a stuck response body silently
-  // hangs the retry path.
+  // drain must trip the per-attempt timeout AND surface the timeout
+  // immediately rather than silently retrying through more aborted
+  // drains. With maxRetries=3 and a 50ms timeout, silent-retry would
+  // take ~200ms; correct behavior fails at ~50ms (one attempt's budget).
+  let fetchCalls = 0;
   const original = globalThis.fetch;
   globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
+    fetchCalls++;
     const signal = init?.signal;
     if (!signal) throw new Error("test: signal missing");
-    // Headers say 503; body never completes.
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         const onAbort = () =>
@@ -898,23 +901,66 @@ test("timeout fires during body drain before retry", async () => {
   try {
     const client = new ApiClient(V1_CONFIG, {
       timeoutMs: 50,
-      maxRetries: 2,
+      maxRetries: 3,
       sleep: () => Promise.resolve(),
     });
     const start = Date.now();
     await assert.rejects(
       async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
       (err: unknown) => {
-        // The abort during the drain bubbles up as the timeout error
-        // — caller sees a clean "timed out" rather than a hung process.
         assert.ok(err instanceof Error);
         assert.match(err.message, /timed out after 50ms/);
         return true;
       },
     );
     const elapsed = Date.now() - start;
-    // Should fail fast on the FIRST attempt's drain, not wait for all retries.
-    assert.ok(elapsed < 1000, `expected fast failure, got ${elapsed}ms`);
+    // Tight bound — should be ~50ms for one attempt's timeout, not
+    // ~200ms (4 attempts × 50ms). Allow generous CI slack (4x = 200ms)
+    // but reject the silent-retry regression (which would land ≥200ms
+    // and grow with maxRetries).
+    assert.ok(elapsed < 180, `expected fast failure on first attempt, got ${elapsed}ms`);
+    // Only one fetch should have happened — drain abort must short-circuit
+    // the retry, not consume the retry budget.
+    assert.equal(fetchCalls, 1, "drain timeout must surface immediately, not retry");
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("timeout error chains the original AbortError as its cause", async () => {
+  // The wrapped timeout Error exposes the original abort via err.cause so
+  // a debugger sees the underlying signal cancellation, not just our
+  // friendly message.
+  const original = globalThis.fetch;
+  globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) =>
+    new Promise((_resolve, reject) => {
+      const signal = init?.signal;
+      signal?.addEventListener("abort", () => {
+        const err = new Error("aborted");
+        err.name = "AbortError";
+        reject(err);
+      });
+    })) as typeof fetch;
+  try {
+    const client = new ApiClient(V1_CONFIG, {
+      timeoutMs: 30,
+      maxRetries: 0,
+      sleep: () => Promise.resolve(),
+    });
+    await assert.rejects(
+      async () => client.request("GET", "/v1/tenants/{tenant_id}/realms"),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.match(err.message, /timed out/);
+        assert.ok(err.cause instanceof Error, "cause should be an Error");
+        assert.equal(
+          (err.cause as Error).name,
+          "AbortError",
+          "cause should be the original AbortError",
+        );
+        return true;
+      },
+    );
   } finally {
     globalThis.fetch = original;
   }

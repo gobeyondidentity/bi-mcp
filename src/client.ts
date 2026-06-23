@@ -228,9 +228,10 @@ export class ApiClient {
     let attempt = 0;
 
     // Retry loop. We make up to `maxRetries + 1` total attempts. The
-    // AbortController for each attempt stays live across fetch + body
-    // drain (if retrying) + body parse (if final), so the timeout covers
-    // the full attempt lifecycle — not just `fetch()` resolution.
+    // AbortController bounds the actual *request* (fetch + body drain +
+    // body parse); the inter-attempt backoff sleep runs OUTSIDE the
+    // timer, so a configured timeoutMs caps each request, not the
+    // cumulative wall time.
     while (true) {
       const controller = new AbortController();
       const timeoutHandle = setTimeout(
@@ -248,6 +249,12 @@ export class ApiClient {
         );
       }
 
+      // Set when the in-try logic decides "retry with this backoff."
+      // Cleared to null for the success/terminal-error paths (which
+      // return or throw out of the try). After the per-attempt
+      // try/finally, a non-null value triggers a sleep + next attempt.
+      let pendingBackoffMs: number | null = null;
+
       try {
         let response: Response;
         try {
@@ -264,70 +271,75 @@ export class ApiClient {
             attempt < this.maxRetries &&
             (isAbort || isNetworkError)
           ) {
-            await this.sleep(this.computeBackoff(attempt));
-            attempt++;
-            continue;
+            pendingBackoffMs = this.computeBackoff(attempt);
+          } else {
+            // AbortError reaches the outer catch and is translated to a
+            // timeout error; TypeError propagates untouched so callers
+            // can still do `err instanceof TypeError`.
+            throw err;
           }
-          // Final attempt failed. AbortError → clear timeout message via
-          // the outer catch; everything else propagates untouched
-          // (preserves `err instanceof TypeError` for downstream callers).
-          if (isAbort) throw err;
-          throw err;
         }
 
-        // ── Response-level retry decision ────────────────────────────────
-        const status = response.status;
-        const retryable = isRetryableStatus(status);
+        if (pendingBackoffMs === null) {
+          // We successfully got a Response. Decide retry-on-status.
+          const status = response!.status;
+          const retryable = isRetryableStatus(status);
 
-        if (retryEligible && attempt < this.maxRetries && retryable) {
-          let backoffMs = this.computeBackoff(attempt);
-          let skipRetry = false;
-          if (status === 429 || status === 503) {
-            const retryAfter = parseRetryAfter(
-              response.headers.get("retry-after"),
-            );
-            if (retryAfter !== null) {
-              if (retryAfter > this.maxRetryAfterMs) {
-                // Server is asking for a longer wait than we'll honor.
-                // Skip retry; fall through to the final response path so
-                // the caller sees the 429/503 with full context.
-                skipRetry = true;
-              } else {
-                backoffMs = retryAfter;
+          if (retryEligible && attempt < this.maxRetries && retryable) {
+            let backoffMs = this.computeBackoff(attempt);
+            let skipRetry = false;
+            if (status === 429 || status === 503) {
+              const retryAfter = parseRetryAfter(
+                response!.headers.get("retry-after"),
+              );
+              if (retryAfter !== null) {
+                if (retryAfter > this.maxRetryAfterMs) {
+                  // Server requested a longer wait than we'll honor.
+                  // Skip retry; the response error surfaces below.
+                  skipRetry = true;
+                } else {
+                  backoffMs = retryAfter;
+                }
               }
             }
-          }
 
-          if (!skipRetry) {
-            // Drain and discard the body so the connection can be reused.
-            // Still under the AbortController, so a hung body drain trips
-            // the timeout the same as a hung fetch.
-            try {
-              await response.text();
-            } catch {
-              // ignore — best-effort cleanup
+            if (!skipRetry) {
+              // Drain and discard the body so the connection can be
+              // reused. The drain still runs under the AbortController
+              // — if the timeout trips mid-drain, the AbortError
+              // propagates and surfaces as a timeout (rather than
+              // silently retrying past the budget).
+              try {
+                await response!.text();
+              } catch (err) {
+                if (err instanceof Error && err.name === "AbortError") {
+                  throw err;
+                }
+                // Other drain errors (e.g., connection reset) are
+                // ignored — best-effort cleanup before the next attempt.
+              }
+              pendingBackoffMs = backoffMs;
             }
-            await this.sleep(backoffMs);
-            attempt++;
-            continue;
+          }
+
+          if (pendingBackoffMs === null) {
+            // ── Final response — parse body and return / throw ──────────
+            const responseBody = await readBody(response!);
+
+            if (DEBUG_HTTP) {
+              logResponse(response!.status, responseBody);
+            }
+
+            if (!response!.ok) {
+              throw buildApiError(response!.status, responseBody);
+            }
+
+            return responseBody;
           }
         }
-
-        // ── Final response — parse body and return / throw ───────────────
-        const responseBody = await readBody(response);
-
-        if (DEBUG_HTTP) {
-          logResponse(response.status, responseBody);
-        }
-
-        if (!response.ok) {
-          throw buildApiError(response.status, responseBody);
-        }
-
-        return responseBody;
       } catch (err) {
         // Centralized AbortError translation. Catches an abort that fires
-        // during fetch, body drain, body parse — anywhere inside the try.
+        // during fetch, body drain, or body parse.
         if (err instanceof Error && err.name === "AbortError") {
           throw new Error(
             `HTTP request to ${urlStr} timed out after ${this.timeoutMs}ms`,
@@ -338,6 +350,13 @@ export class ApiClient {
       } finally {
         clearTimeout(timeoutHandle);
       }
+
+      // ── Inter-attempt backoff (OUTSIDE the per-attempt timer) ──────────
+      // We only reach here if pendingBackoffMs was set inside the try.
+      // The sleep is unbounded by the per-attempt timeout — that timer
+      // applies to the request, not the wait between requests.
+      await this.sleep(pendingBackoffMs);
+      attempt++;
     }
   }
 
