@@ -15,10 +15,12 @@ jobs:
         with:
           fetch-depth: 0    # full history for the main-ancestry check
       - name: Refuse tags that aren't on main
-        # Access-control layer #1: only commits already on main can be
-        # published. Stops accidental tagging of feature branches and
-        # unmerged work. Paired with repo tag-protection rules (manual
-        # setup) which restrict *who* can push v*.*.* tags at all.
+        # Only commits already on main can be published. Stops accidental
+        # tagging of feature branches and unmerged work. This is the
+        # primary gate on WHAT gets published. Restricting WHO can push
+        # v*.*.* tags is an optional tightening — add a tag-protection
+        # rule in repo settings if the team grows beyond a small trusted
+        # group.
         run: |
           git fetch origin main
           if ! git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
