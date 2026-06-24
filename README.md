@@ -1,5 +1,8 @@
 # @beyondidentity/mcp
 
+[![npm version](https://img.shields.io/npm/v/@beyondidentity/mcp.svg)](https://www.npmjs.com/package/@beyondidentity/mcp)
+[![CI](https://github.com/gobeyondidentity/bi-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/gobeyondidentity/bi-mcp/actions/workflows/ci.yml)
+
 An MCP (Model Context Protocol) server that gives AI agents direct access to the Beyond Identity API — no admin panel required. Agents can manage identities, groups, applications, SSO configurations, credentials, and every other Beyond Identity resource through natural tool calls.
 
 The server auto-detects which Beyond Identity platform you're using from your API key and registers the appropriate tools:
