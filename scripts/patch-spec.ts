@@ -38,6 +38,7 @@ function applyPatchesForSpec(specName: "v1" | "v0"): void {
     } catch (err) {
       throw new Error(
         `Patch failed for ${specName}: ${patch.description}\n  ${(err as Error).message}`,
+        { cause: err },
       );
     }
     if (!patch.alreadyApplied(doc)) {

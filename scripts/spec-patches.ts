@@ -5,7 +5,7 @@
 // notice the upstream change.
 
 import type { Document } from "yaml";
-import { isMap, isScalar } from "yaml";
+import { isMap } from "yaml";
 
 export interface SpecPatch {
   description: string;
@@ -18,12 +18,6 @@ export interface SpecPatch {
 function getMap(doc: Document, path: ReadonlyArray<string>): ReturnType<Document["getIn"]> | undefined {
   const node = doc.getIn(path as Array<unknown>, true);
   return isMap(node) ? node : undefined;
-}
-
-function getScalarValue(doc: Document, path: ReadonlyArray<string>): unknown {
-  const node = doc.getIn(path as Array<unknown>, true);
-  if (isScalar(node)) return node.value;
-  return node;
 }
 
 // ── Patches ────────────────────────────────────────────────────────────────

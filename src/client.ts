@@ -1,5 +1,6 @@
 import { ApiError } from "./types.js";
 import type { Config, Platform } from "./types.js";
+import pkg from "../package.json" with { type: "json" };
 
 // When DEBUG_HTTP=1, log every outgoing HTTP request + incoming response to
 // stderr. Useful for the exercise script's --debug-http mode and for ad-hoc
@@ -7,8 +8,82 @@ import type { Config, Platform } from "./types.js";
 const DEBUG_HTTP = process.env.DEBUG_HTTP === "1";
 const DEBUG_BODY_PREVIEW_CHARS = 5000;
 
-function logRequest(method: string, url: string, body: string | undefined): void {
-  process.stderr.write(`[http] → ${method} ${url}\n`);
+const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_BASE_BACKOFF_MS = 200;
+const DEFAULT_JITTER_RATIO = 0.2;
+// Upper bound on `Retry-After` honoring. If the server requests a longer
+// wait, we surface the error rather than parking the process — a server
+// asking for >60s isn't asking for retry, it's asking for backoff.
+const DEFAULT_MAX_RETRY_AFTER_MS = 60_000;
+const DEFAULT_USER_AGENT = `beyond-identity-mcp/${pkg.version}`;
+
+// Methods we'll retry by default. POST/PATCH are non-idempotent and stay
+// one-shot unless a caller explicitly opts in via `retryNonIdempotent`.
+const IDEMPOTENT_METHODS = new Set(["GET", "HEAD", "PUT", "DELETE"]);
+
+function realSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Retry-After per RFC 9110: either a non-negative integer (seconds) or an
+// HTTP-date. Returns delay in ms, or null if the header is absent/malformed.
+function parseRetryAfter(value: string | null): number | null {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  const asNum = Number(trimmed);
+  if (Number.isFinite(asNum) && asNum >= 0) {
+    return asNum * 1000;
+  }
+  const asDate = Date.parse(trimmed);
+  if (!Number.isNaN(asDate)) {
+    return Math.max(0, asDate - Date.now());
+  }
+  return null;
+}
+
+// 5xx-except-501 and 429 are the transient-error statuses we retry.
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status !== 501);
+}
+
+// Parse the response body using the same JSON-suffix detection the original
+// implementation used (RFC 6839: application/scim+json, application/problem+json).
+async function readBody(response: Response): Promise<unknown> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (/^application\/(?:[^;]+\+)?json(?:;|$)/i.test(contentType)) {
+    return response.json();
+  }
+  return response.text();
+}
+
+function buildApiError(status: number, body: unknown): ApiError {
+  const errorBody = body as Record<string, unknown> | string;
+  let code = "UNKNOWN";
+  let message = `HTTP ${status}`;
+  let details: unknown;
+  if (typeof errorBody === "object" && errorBody !== null) {
+    code = String(errorBody.code ?? errorBody.error ?? "UNKNOWN");
+    message = String(
+      errorBody.message ?? errorBody.error_description ?? `HTTP ${status}`,
+    );
+    details = errorBody;
+  } else if (typeof errorBody === "string" && errorBody.length > 0) {
+    message = errorBody;
+  }
+  return new ApiError(status, code, message, details);
+}
+
+function logRequest(
+  method: string,
+  url: string,
+  body: string | undefined,
+  attempt: number,
+  maxRetries: number,
+): void {
+  const tag = attempt === 0 ? "" : ` (retry ${attempt}/${maxRetries})`;
+  process.stderr.write(`[http]${tag} → ${method} ${url}\n`);
   if (body) {
     process.stderr.write(
       `[http]   body: ${body.slice(0, DEBUG_BODY_PREVIEW_CHARS)}${body.length > DEBUG_BODY_PREVIEW_CHARS ? " …(truncated)" : ""}\n`,
@@ -28,27 +103,82 @@ function logResponse(status: number, body: unknown): void {
   }
 }
 
+export interface ApiClientOptions {
+  /**
+   * Per-attempt end-to-end timeout in milliseconds. Default 30s; env
+   * `BI_HTTP_TIMEOUT_MS` overrides. Covers connect + headers + body parsing
+   * — not just `fetch()` resolution.
+   */
+  timeoutMs?: number;
+  /** Maximum retry attempts after the initial request. 0 disables retries. Default 3. */
+  maxRetries?: number;
+  /** Base delay for exponential backoff in ms. Default 200. Effective delay: base * 2^attempt ± jitter. */
+  baseBackoffMs?: number;
+  /** Jitter ratio applied to backoff. Default 0.2 (±20%). */
+  jitterRatio?: number;
+  /**
+   * Upper bound on `Retry-After` honoring in ms. Default 60s. If a server
+   * requests a longer wait, the retry is skipped and the response error is
+   * surfaced to the caller.
+   */
+  maxRetryAfterMs?: number;
+  /** Sleep implementation. Injectable so tests can fast-forward through backoff waits. */
+  sleep?: (ms: number) => Promise<void>;
+  /** User-Agent string. Defaults to `beyond-identity-mcp/<pkg.version>`. */
+  userAgent?: string;
+}
+
+export interface RequestOptions {
+  pathParams?: Record<string, string>;
+  queryParams?: Record<string, string | number | boolean | undefined>;
+  body?: unknown;
+  /**
+   * Opt-in for POST/PATCH retries on transient errors. Most BI write
+   * endpoints are NOT idempotent (creating a realm twice = two realms), so
+   * this defaults off. Set to true only when the spec marks the endpoint
+   * as idempotent or the operation is safe to repeat.
+   */
+  retryNonIdempotent?: boolean;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private token: string;
   private tenantId: string;
   private platform: Platform;
+  private timeoutMs: number;
+  private maxRetries: number;
+  private baseBackoffMs: number;
+  private jitterRatio: number;
+  private maxRetryAfterMs: number;
+  private sleep: (ms: number) => Promise<void>;
+  private userAgent: string;
 
-  constructor(config: Config) {
+  constructor(config: Config, options?: ApiClientOptions) {
     this.baseUrl = config.baseUrl;
     this.token = config.apiToken;
     this.tenantId = config.tenantId;
     this.platform = config.platform;
+
+    const envTimeoutRaw = process.env.BI_HTTP_TIMEOUT_MS;
+    const envTimeout = envTimeoutRaw !== undefined ? Number(envTimeoutRaw) : NaN;
+    const envTimeoutValid = Number.isFinite(envTimeout) && envTimeout > 0;
+    this.timeoutMs =
+      options?.timeoutMs ??
+      (envTimeoutValid ? envTimeout : DEFAULT_TIMEOUT_MS);
+
+    this.maxRetries = options?.maxRetries ?? DEFAULT_MAX_RETRIES;
+    this.baseBackoffMs = options?.baseBackoffMs ?? DEFAULT_BASE_BACKOFF_MS;
+    this.jitterRatio = options?.jitterRatio ?? DEFAULT_JITTER_RATIO;
+    this.maxRetryAfterMs = options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS;
+    this.sleep = options?.sleep ?? realSleep;
+    this.userAgent = options?.userAgent ?? DEFAULT_USER_AGENT;
   }
 
   async request(
     method: string,
     pathTemplate: string,
-    options?: {
-      pathParams?: Record<string, string>;
-      queryParams?: Record<string, string | number | boolean | undefined>;
-      body?: unknown;
-    },
+    options?: RequestOptions,
   ): Promise<unknown> {
     let path = pathTemplate;
 
@@ -78,54 +208,162 @@ export class ApiClient {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.token}`,
       "Content-Type": "application/json",
+      "User-Agent": this.userAgent,
     };
 
-    const fetchOptions: RequestInit = { method, headers };
-    if (options?.body !== undefined && (method === "POST" || method === "PATCH" || method === "PUT")) {
-      fetchOptions.body = JSON.stringify(options.body);
+    const baseFetchOptions: RequestInit = { method, headers };
+    if (
+      options?.body !== undefined &&
+      (method === "POST" || method === "PATCH" || method === "PUT")
+    ) {
+      baseFetchOptions.body = JSON.stringify(options.body);
     }
 
-    if (DEBUG_HTTP) {
-      logRequest(method, url.toString(), fetchOptions.body as string | undefined);
-    }
+    const methodUpper = method.toUpperCase();
+    const retryEligible =
+      IDEMPOTENT_METHODS.has(methodUpper) ||
+      options?.retryNonIdempotent === true;
 
-    const response = await fetch(url.toString(), fetchOptions);
+    const urlStr = url.toString();
+    let attempt = 0;
 
-    let responseBody: unknown;
-    const contentType = response.headers.get("content-type") ?? "";
-    // Accept application/json and any RFC 6839 structured-syntax JSON suffix
-    // (e.g. application/scim+json, application/problem+json). Without this,
-    // SCIM responses fall through to text() and downstream handlers double-
-    // encode them when they JSON.stringify the "result".
-    if (/^application\/(?:[^;]+\+)?json(?:;|$)/i.test(contentType)) {
-      responseBody = await response.json();
-    } else {
-      responseBody = await response.text();
-    }
+    // Retry loop. We make up to `maxRetries + 1` total attempts. The
+    // AbortController bounds the actual *request* (fetch + body drain +
+    // body parse); the inter-attempt backoff sleep runs OUTSIDE the
+    // timer, so a configured timeoutMs caps each request, not the
+    // cumulative wall time.
+    while (true) {
+      const controller = new AbortController();
+      const timeoutHandle = setTimeout(
+        () => controller.abort(),
+        this.timeoutMs,
+      );
 
-    if (DEBUG_HTTP) {
-      logResponse(response.status, responseBody);
-    }
-
-    if (!response.ok) {
-      const errorBody = responseBody as Record<string, unknown> | string;
-      let code = "UNKNOWN";
-      let message = `HTTP ${response.status}`;
-      let details: unknown;
-
-      if (typeof errorBody === "object" && errorBody !== null) {
-        code = String(errorBody.code ?? errorBody.error ?? "UNKNOWN");
-        message = String(
-          errorBody.message ?? errorBody.error_description ?? `HTTP ${response.status}`,
+      if (DEBUG_HTTP) {
+        logRequest(
+          method,
+          urlStr,
+          baseFetchOptions.body as string | undefined,
+          attempt,
+          this.maxRetries,
         );
-        details = errorBody;
-      } else if (typeof errorBody === "string" && errorBody.length > 0) {
-        message = errorBody;
       }
 
-      throw new ApiError(response.status, code, message, details);
-    }
+      // Set when the in-try logic decides "retry with this backoff."
+      // Cleared to null for the success/terminal-error paths (which
+      // return or throw out of the try). After the per-attempt
+      // try/finally, a non-null value triggers a sleep + next attempt.
+      let pendingBackoffMs: number | null = null;
 
-    return responseBody;
+      try {
+        let response: Response;
+        try {
+          response = await fetch(urlStr, {
+            ...baseFetchOptions,
+            signal: controller.signal,
+          });
+        } catch (err) {
+          // ── Transport-level error (network failure, fetch-time abort) ──
+          const isAbort = err instanceof Error && err.name === "AbortError";
+          const isNetworkError = err instanceof TypeError;
+          if (
+            retryEligible &&
+            attempt < this.maxRetries &&
+            (isAbort || isNetworkError)
+          ) {
+            pendingBackoffMs = this.computeBackoff(attempt);
+          } else {
+            // AbortError reaches the outer catch and is translated to a
+            // timeout error; TypeError propagates untouched so callers
+            // can still do `err instanceof TypeError`.
+            throw err;
+          }
+        }
+
+        if (pendingBackoffMs === null) {
+          // We successfully got a Response. Decide retry-on-status.
+          const status = response!.status;
+          const retryable = isRetryableStatus(status);
+
+          if (retryEligible && attempt < this.maxRetries && retryable) {
+            let backoffMs = this.computeBackoff(attempt);
+            let skipRetry = false;
+            if (status === 429 || status === 503) {
+              const retryAfter = parseRetryAfter(
+                response!.headers.get("retry-after"),
+              );
+              if (retryAfter !== null) {
+                if (retryAfter > this.maxRetryAfterMs) {
+                  // Server requested a longer wait than we'll honor.
+                  // Skip retry; the response error surfaces below.
+                  skipRetry = true;
+                } else {
+                  backoffMs = retryAfter;
+                }
+              }
+            }
+
+            if (!skipRetry) {
+              // Drain and discard the body so the connection can be
+              // reused. The drain still runs under the AbortController
+              // — if the timeout trips mid-drain, the AbortError
+              // propagates and surfaces as a timeout (rather than
+              // silently retrying past the budget).
+              try {
+                await response!.text();
+              } catch (err) {
+                if (err instanceof Error && err.name === "AbortError") {
+                  throw err;
+                }
+                // Other drain errors (e.g., connection reset) are
+                // ignored — best-effort cleanup before the next attempt.
+              }
+              pendingBackoffMs = backoffMs;
+            }
+          }
+
+          if (pendingBackoffMs === null) {
+            // ── Final response — parse body and return / throw ──────────
+            const responseBody = await readBody(response!);
+
+            if (DEBUG_HTTP) {
+              logResponse(response!.status, responseBody);
+            }
+
+            if (!response!.ok) {
+              throw buildApiError(response!.status, responseBody);
+            }
+
+            return responseBody;
+          }
+        }
+      } catch (err) {
+        // Centralized AbortError translation. Catches an abort that fires
+        // during fetch, body drain, or body parse.
+        if (err instanceof Error && err.name === "AbortError") {
+          throw new Error(
+            `HTTP request to ${urlStr} timed out after ${this.timeoutMs}ms`,
+            { cause: err },
+          );
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeoutHandle);
+      }
+
+      // ── Inter-attempt backoff (OUTSIDE the per-attempt timer) ──────────
+      // We only reach here if pendingBackoffMs was set inside the try.
+      // The sleep is unbounded by the per-attempt timeout — that timer
+      // applies to the request, not the wait between requests.
+      await this.sleep(pendingBackoffMs);
+      attempt++;
+    }
+  }
+
+  // Exponential backoff with symmetric jitter. base * 2^attempt ± jitterRatio.
+  private computeBackoff(attempt: number): number {
+    const base = this.baseBackoffMs * Math.pow(2, attempt);
+    const jitter = base * this.jitterRatio * (Math.random() * 2 - 1);
+    return Math.max(0, base + jitter);
   }
 }
