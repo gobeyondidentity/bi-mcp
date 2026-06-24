@@ -61,11 +61,13 @@ jobs:
         run: |
           # `git status --porcelain` catches modified, new, deleted, and
           # renamed files — `git diff` would miss anything untracked. We
-          # scope to src/generated/ so unrelated working-tree churn (e.g.
-          # an escaped cache file) doesn't false-positive.
-          drift=$(git status --porcelain src/generated)
+          # scope to the generator outputs: the generated tool modules
+          # under src/generated/, plus the two patched OpenAPI YAMLs at
+          # the repo root (written by scripts/patch-spec.ts and shipped to
+          # npm consumers via package.json#files).
+          drift=$(git status --porcelain src/generated openapi.yaml openapi-v0.yaml)
           if [ -n "$drift" ]; then
-            echo "::error::Generated files are stale, new, or removed — run \`npm run generate\` locally and commit the result."
+            echo "::error::Generator outputs are stale, new, or removed — run \`npm run generate\` locally and commit the result."
             echo "$drift"
             exit 1
           fi

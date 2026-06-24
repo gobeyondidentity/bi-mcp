@@ -32,9 +32,13 @@ export default [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
-      // The codebase uses `unknown` rigorously, but generated/zod-wrapped code
-      // legitimately needs `any` casts in places. Warn rather than error.
-      "@typescript-eslint/no-explicit-any": "warn",
+      // Forbidden in linted code. Generated code (src/generated/**) is
+      // excluded via the top-level `ignores`, so the existing zod-wrapped
+      // any-casts there don't trip this. Intentional casts elsewhere
+      // require an explicit `// eslint-disable-next-line` with a
+      // justification comment. The previous `"warn"` setting was
+      // self-defeating under `--max-warnings 0` (CI + lint-staged).
+      "@typescript-eslint/no-explicit-any": "error",
       // We allow non-null assertions only where context proves safety
       // (post-skip predicates in exercise scenarios mostly).
       "@typescript-eslint/no-non-null-assertion": "off",
